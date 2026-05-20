@@ -1,101 +1,125 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const OpenAI = require('openai');
 const PROMPTS = require('../utils/prompts');
+const SCHEMAS = require('../utils/schemas');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-const MODELS_TO_TRY = [
-  'gemini-flash-latest',
-  'gemini-2.5-flash-lite',
-  'gemini-flash-lite-latest',
-  'gemini-3.5-flash',
-  'gemini-2.5-flash'
-];
-
-/**
- * Robust wrapper that tries multiple models in sequence in case of rate limits or errors
- */
-async function generateWithFallback(promptOrParts) {
-  let lastError = null;
-  for (const modelName of MODELS_TO_TRY) {
-    try {
-      console.log(`[AI] Attempting content generation with model: ${modelName}`);
-      const modelInstance = genAI.getGenerativeModel({ model: modelName });
-      const result = await modelInstance.generateContent(promptOrParts);
-      return result;
-    } catch (err) {
-      console.warn(`[AI Fallback] Model ${modelName} failed: ${err.message}. Trying next...`);
-      lastError = err;
+let _client = null;
+function getClient() {
+  if (!_client) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY chưa được điền trong .env — vui lòng dán key OpenAI mới (đã rotate) vào file .env và lưu lại.');
     }
+    _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
-  throw new Error(`All Gemini models failed. Last error: ${lastError ? lastError.message : 'Unknown error'}`);
+  return _client;
 }
 
-/**
- * Classify file content (text) using AI
- */
-async function classifyFromText(text, existingFolders) {
-  const prompt = PROMPTS.classifyFile(text, existingFolders);
-  const result = await generateWithFallback(prompt);
-  const response = result.response.text();
-  return parseJSON(response);
-}
+const TEXT_MODEL = 'gpt-4o-mini';
+const VISION_MODEL = 'gpt-4o';
 
-/**
- * Classify file content (image) using AI
- */
-async function classifyFromImage(imageBuffer, mimeType, existingFolders) {
-  const imagePart = {
-    inlineData: {
-      data: imageBuffer.toString('base64'),
-      mimeType: mimeType
+async function chatJSON({ model, messages, schema }) {
+  const completion = await getClient().chat.completions.create({
+    model,
+    messages,
+    response_format: {
+      type: 'json_schema',
+      json_schema: schema
     }
+  });
+  const raw = completion.choices[0].message.content;
+  return JSON.parse(raw);
+}
+
+function imageMessagePart(buffer, mimeType) {
+  return {
+    type: 'image_url',
+    image_url: { url: `data:${mimeType};base64,${buffer.toString('base64')}` }
   };
-  const promptText = PROMPTS.classifyImage(existingFolders);
-  const result = await generateWithFallback([promptText, imagePart]);
-  const response = result.response.text();
-  return parseJSON(response);
 }
 
-/**
- * Generate cheat sheet from all texts in a folder
- */
+async function classifyFromText(text, existingFolders) {
+  return chatJSON({
+    model: TEXT_MODEL,
+    schema: SCHEMAS.CLASSIFY_SCHEMA,
+    messages: [
+      { role: 'system', content: 'Bạn là trợ lý AI phân loại tài liệu giáo dục. Trả về theo schema JSON đã định nghĩa.' },
+      { role: 'user', content: PROMPTS.classifyFile(text, existingFolders) }
+    ]
+  });
+}
+
+async function classifyFromImage(imageBuffer, mimeType, existingFolders) {
+  return chatJSON({
+    model: VISION_MODEL,
+    schema: SCHEMAS.CLASSIFY_SCHEMA,
+    messages: [
+      { role: 'system', content: 'Bạn là trợ lý AI phân loại tài liệu giáo dục. Trả về theo schema JSON đã định nghĩa.' },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: PROMPTS.classifyImage(existingFolders) },
+          imageMessagePart(imageBuffer, mimeType)
+        ]
+      }
+    ]
+  });
+}
+
 async function generateCheatSheet(allTexts) {
-  const prompt = PROMPTS.generateCheatSheet(allTexts);
-  const result = await generateWithFallback(prompt);
-  return result.response.text();
+  return chatJSON({
+    model: TEXT_MODEL,
+    schema: SCHEMAS.CHEAT_SHEET_SCHEMA,
+    messages: [
+      { role: 'system', content: 'Bạn là thủ khoa tạo phao cứu cấp. Trả về theo schema JSON đã định nghĩa.' },
+      { role: 'user', content: PROMPTS.generateCheatSheet(allTexts) }
+    ]
+  });
 }
 
-/**
- * Generate podcast script from all texts in a folder
- */
+async function migrateMarkdownToJson(markdown) {
+  return chatJSON({
+    model: TEXT_MODEL,
+    schema: SCHEMAS.CHEAT_SHEET_SCHEMA,
+    messages: [
+      { role: 'system', content: 'Bạn là trợ lý chuyển đổi định dạng. Trả về theo schema JSON đã định nghĩa.' },
+      { role: 'user', content: PROMPTS.migrateMarkdownToJson(markdown) }
+    ]
+  });
+}
+
 async function generatePodcastScript(allTexts) {
-  const prompt = PROMPTS.generatePodcastScript(allTexts);
-  const result = await generateWithFallback(prompt);
-  const response = result.response.text();
-  return parseJSON(response);
+  const out = await chatJSON({
+    model: TEXT_MODEL,
+    schema: SCHEMAS.PODCAST_SCRIPT_SCHEMA,
+    messages: [
+      { role: 'system', content: 'Bạn là biên kịch podcast giáo dục. Trả về theo schema JSON đã định nghĩa.' },
+      { role: 'user', content: PROMPTS.generatePodcastScript(allTexts) }
+    ]
+  });
+  return out.lines;
 }
 
-/**
- * Parse JSON from AI response, stripping markdown code blocks if present
- */
-function parseJSON(text) {
-  // Remove markdown code blocks
-  let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch (e) {
-    // Try to extract JSON from the response
-    const jsonMatch = cleaned.match(/[\[{][\s\S]*[\]}]/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Failed to parse AI response as JSON: ' + cleaned.substring(0, 200));
-  }
+async function analyzeHandwriting(imageBuffer, mimeType) {
+  return chatJSON({
+    model: VISION_MODEL,
+    schema: SCHEMAS.HANDWRITING_SCHEMA,
+    messages: [
+      { role: 'system', content: 'Bạn là chuyên gia phân tích chữ viết tay. Trả về theo schema JSON đã định nghĩa.' },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: PROMPTS.analyzeHandwriting() },
+          imageMessagePart(imageBuffer, mimeType)
+        ]
+      }
+    ]
+  });
 }
 
 module.exports = {
   classifyFromText,
   classifyFromImage,
   generateCheatSheet,
-  generatePodcastScript
+  migrateMarkdownToJson,
+  generatePodcastScript,
+  analyzeHandwriting
 };

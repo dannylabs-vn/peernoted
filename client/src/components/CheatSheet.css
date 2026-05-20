@@ -255,3 +255,30 @@
   font-size: 0.85rem;
   margin-bottom: var(--space-lg);
 }
+
+/* ── New toolbar + legacy notice ── */
+.cheatsheet-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+}
+.cheatsheet-legacy-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+.btn-sm { padding: 6px 12px; font-size: 13px; }

@@ -1,23 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const File = require('../models/File');
-const Folder = require('../models/Folder');
+const { supabase, toApi, toApiList } = require('../config/supabase');
 const { uploadToStorage, deleteFromStorage } = require('../services/storageService');
+const { fixLatin1Name } = require('../utils/encoding');
 
-// Multer config - store in memory for processing
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+  limits: { fileSize: 50 * 1024 * 1024 }
 });
 
 // GET files by folder
 router.get('/', async (req, res) => {
   try {
     const { folder_id } = req.query;
-    const filter = folder_id ? { folder_id } : {};
-    const files = await File.find(filter).sort({ createdAt: -1 });
-    res.json(files);
+    let query = supabase.from('files').select('*').order('created_at', { ascending: false });
+    if (folder_id) query = query.eq('folder_id', folder_id);
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json(toApiList(data));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -29,32 +30,31 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
     const { folder_id } = req.body;
     if (!folder_id) return res.status(400).json({ error: 'folder_id is required' });
 
-    const folder = await Folder.findById(folder_id);
+    const { data: folder, error: fErr } = await supabase
+      .from('folders').select('id').eq('id', folder_id).maybeSingle();
+    if (fErr) throw fErr;
     if (!folder) return res.status(404).json({ error: 'Folder not found' });
 
     const savedFiles = [];
 
     for (const file of req.files) {
-      // Upload to cloud storage
       const storageUrl = await uploadToStorage(file);
-
       const ext = file.originalname.split('.').pop().toLowerCase();
-      
-      // Correct Latin-1 encoding issues in multer originalname
-      const originalNameUtf8 = /[\u0080-\u00ff]/.test(file.originalname)
-        ? Buffer.from(file.originalname, 'latin1').toString('utf8')
-        : file.originalname;
+      const originalNameUtf8 = fixLatin1Name(file.originalname);
 
-      const newFile = new File({
-        folder_id,
-        original_name: originalNameUtf8,
-        storage_url: storageUrl,
-        file_type: ext,
-        file_size: file.size
-      });
-
-      await newFile.save();
-      savedFiles.push(newFile);
+      const { data, error } = await supabase
+        .from('files')
+        .insert({
+          folder_id,
+          original_name: originalNameUtf8,
+          storage_url: storageUrl,
+          file_type: ext,
+          file_size: file.size
+        })
+        .select('*')
+        .single();
+      if (error) throw error;
+      savedFiles.push(toApi(data));
     }
 
     res.status(201).json(savedFiles);
@@ -66,14 +66,18 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
 // DELETE file
 router.delete('/:id', async (req, res) => {
   try {
-    const file = await File.findByIdAndDelete(req.params.id);
-    if (!file) return res.status(404).json({ error: 'File not found' });
+    const { data, error } = await supabase
+      .from('files')
+      .delete()
+      .eq('id', req.params.id)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'File not found' });
 
-    // Try to delete from storage too
-    if (file.storage_url) {
-      try { await deleteFromStorage(file.storage_url); } catch (e) { /* ignore */ }
+    if (data.storage_url) {
+      try { await deleteFromStorage(data.storage_url); } catch (e) { /* ignore */ }
     }
-
     res.json({ message: 'File deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -1,16 +1,32 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
-import { getCheatSheet, clearCheatSheet } from '../utils/api'
+import {
+  getCheatSheet,
+  clearCheatSheet,
+  setCheatSheetTemplate,
+  migrateCheatSheet
+} from '../utils/api'
+import CheatSheetRenderer from './cheatsheet/CheatSheetRenderer'
+import TemplatePicker from './cheatsheet/TemplatePicker'
+import HandwritingUploadModal from './cheatsheet/HandwritingUploadModal'
+import ExportButtons from './cheatsheet/ExportButtons'
 import './CheatSheet.css'
 
 export default function CheatSheet({ folderId, folderName }) {
+  const [json, setJson] = useState(null)
   const [markdown, setMarkdown] = useState('')
+  const [template, setTemplate] = useState('academic-blue')
+  const [font, setFont] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [cached, setCached] = useState(false)
+  const [showHwModal, setShowHwModal] = useState(false)
+  const [migrating, setMigrating] = useState(false)
+
+  const renderRef = useRef(null)
 
   useEffect(() => {
     loadCheatSheet()
@@ -21,8 +37,11 @@ export default function CheatSheet({ folderId, folderName }) {
     setError(null)
     try {
       const res = await getCheatSheet(folderId)
-      setMarkdown(res.data.markdown)
-      setCached(res.data.cached)
+      setJson(res.data.json || null)
+      setMarkdown(res.data.markdown || '')
+      setTemplate(res.data.template || 'academic-blue')
+      setFont(res.data.font || '')
+      setCached(!!res.data.cached)
     } catch (err) {
       setError(err.response?.data?.error || err.message)
     } finally {
@@ -37,6 +56,31 @@ export default function CheatSheet({ folderId, folderName }) {
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  const handleTemplateChange = async (newTpl) => {
+    setTemplate(newTpl)
+    try { await setCheatSheetTemplate(folderId, newTpl) } catch (e) { /* non-fatal */ }
+  }
+
+  const handleMigrate = async () => {
+    setMigrating(true)
+    try {
+      const res = await migrateCheatSheet(folderId)
+      if (res.data.json) {
+        setJson(res.data.json)
+        setMarkdown('')
+      }
+    } catch (e) {
+      setError(e.response?.data?.error || e.message)
+    } finally {
+      setMigrating(false)
+    }
+  }
+
+  const handleHandwritingApplied = (fontFamily) => {
+    setFont(fontFamily)
+    setTemplate('sketch-notebook')
   }
 
   if (loading) {
@@ -85,22 +129,55 @@ export default function CheatSheet({ folderId, folderName }) {
         </div>
         <div className="cheatsheet-actions">
           {cached && <span className="badge badge-accent">⚡ Cached</span>}
+          <button className="btn btn-secondary" onClick={() => setShowHwModal(true)}>
+            ✍️ Viết tay
+          </button>
           <button className="btn btn-secondary" onClick={handleRegenerate}>
             🔄 Tạo lại
           </button>
         </div>
       </div>
 
-      <div className="cheatsheet-content bento-grid">
-        <div className="bento-card bento-main glass">
-          <ReactMarkdown
-            remarkPlugins={[remarkMath]}
-            rehypePlugins={[rehypeKatex]}
-          >
-            {markdown}
-          </ReactMarkdown>
+      {json && (
+        <div className="cheatsheet-toolbar">
+          <TemplatePicker value={template} onChange={handleTemplateChange} />
+          <ExportButtons targetRef={renderRef} fileName={folderName} />
         </div>
+      )}
+
+      <div className="cheatsheet-content">
+        {json ? (
+          <CheatSheetRenderer ref={renderRef} data={json} template={template} font={font} />
+        ) : markdown ? (
+          <div className="bento-card bento-main glass">
+            <div className="cheatsheet-legacy-notice">
+              <span>📜 Phao này dùng định dạng cũ.</span>
+              <button className="btn btn-primary btn-sm" onClick={handleMigrate} disabled={migrating}>
+                {migrating ? 'Đang nâng cấp...' : '✨ Nâng cấp lên template mới'}
+              </button>
+            </div>
+            <ReactMarkdown
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+            >
+              {markdown}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <div className="bento-card bento-main glass">
+            <p>Chưa có nội dung.</p>
+          </div>
+        )}
       </div>
+
+      {showHwModal && (
+        <HandwritingUploadModal
+          folderId={folderId}
+          currentFont={font}
+          onClose={() => setShowHwModal(false)}
+          onApplied={handleHandwritingApplied}
+        />
+      )}
     </div>
   )
 }

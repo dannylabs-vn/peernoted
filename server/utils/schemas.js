@@ -1,0 +1,115 @@
+const CHEAT_SHEET_SCHEMA = {
+  name: 'cheat_sheet',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['title', 'sections'],
+    properties: {
+      title: { type: 'string' },
+      sections: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['heading', 'blocks'],
+          properties: {
+            heading: { type: 'string' },
+            blocks: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['type', 'content', 'term', 'items', 'caption'],
+                properties: {
+                  type: {
+                    type: 'string',
+                    enum: ['formula', 'definition', 'list', 'example', 'note']
+                  },
+                  content: { type: 'string' },
+                  term: { type: ['string', 'null'] },
+                  items: {
+                    type: ['array', 'null'],
+                    items: { type: 'string' }
+                  },
+                  caption: { type: ['string', 'null'] }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+const CLASSIFY_SCHEMA = {
+  name: 'classify',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['subject', 'chapter', 'grade', 'folder_name', 'summary', 'tags'],
+    properties: {
+      subject: { type: 'string' },
+      chapter: { type: 'string' },
+      grade: { type: 'string' },
+      folder_name: { type: 'string' },
+      summary: { type: 'string' },
+      tags: {
+        type: 'array',
+        items: { type: 'string' }
+      }
+    }
+  }
+};
+
+const PODCAST_SCRIPT_SCHEMA = {
+  name: 'podcast_script',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['lines'],
+    properties: {
+      lines: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['speaker', 'text'],
+          properties: {
+            speaker: { type: 'string', enum: ['MC_A', 'MC_B'] },
+            text: { type: 'string' }
+          }
+        }
+      }
+    }
+  }
+};
+
+const HANDWRITING_SCHEMA = {
+  name: 'handwriting_analysis',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['font_family', 'reasoning', 'slant', 'weight'],
+    properties: {
+      font_family: {
+        type: 'string',
+        enum: ['Caveat', 'Patrick Hand', 'Dancing Script', 'Pacifico', 'Be Vietnam Pro Italic']
+      },
+      reasoning: { type: 'string' },
+      slant: { type: 'string', enum: ['upright', 'slight-right', 'strong-right', 'left'] },
+      weight: { type: 'string', enum: ['thin', 'regular', 'bold'] }
+    }
+  }
+};
+
+module.exports = {
+  CHEAT_SHEET_SCHEMA,
+  CLASSIFY_SCHEMA,
+  PODCAST_SCRIPT_SCHEMA,
+  HANDWRITING_SCHEMA
+};

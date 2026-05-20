@@ -1,40 +1,75 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const Folder = require('../models/Folder');
-const File = require('../models/File');
-const { classifyFromText, classifyFromImage, generateCheatSheet, generatePodcastScript } = require('../services/aiService');
+const { supabase, toApi } = require('../config/supabase');
+const {
+  classifyFromText,
+  classifyFromImage,
+  generateCheatSheet,
+  migrateMarkdownToJson,
+  generatePodcastScript,
+  analyzeHandwriting
+} = require('../services/aiService');
 const { extractText, isImageType, getImageMimeType } = require('../services/extractorService');
 const { uploadToStorage } = require('../services/storageService');
 const { generatePodcastAudio } = require('../services/ttsService');
+const { fixLatin1Name } = require('../utils/encoding');
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-/**
- * POST /api/ai/classify
- * Upload + AI auto-classify files into folders
- */
+const handwritingUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+const VALID_TEMPLATES = ['academic-blue', 'modern-card', 'sketch-notebook', 'minimalist'];
+
+async function getFolderOr404(id, res) {
+  const { data, error } = await supabase
+    .from('folders').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    res.status(404).json({ error: 'Folder not found' });
+    return null;
+  }
+  return data;
+}
+
+async function getAllTextsForFolder(folderId) {
+  const { data, error } = await supabase
+    .from('files')
+    .select('extracted_text')
+    .eq('folder_id', folderId);
+  if (error) throw error;
+  return data
+    .map(f => f.extracted_text)
+    .filter(t => t && t.trim().length > 0)
+    .join('\n\n---\n\n');
+}
+
+// ===========================================================================
+// POST /api/ai/classify — upload + auto-classify into folders
+// ===========================================================================
 router.post('/classify', upload.array('files', 20), async (req, res) => {
   try {
     const results = [];
 
     for (const file of req.files) {
-      // Correct Latin-1 encoding issues in multer originalname
-      const originalNameUtf8 = /[\u0080-\u00ff]/.test(file.originalname)
-        ? Buffer.from(file.originalname, 'latin1').toString('utf8')
-        : file.originalname;
-
+      const originalNameUtf8 = fixLatin1Name(file.originalname);
       const ext = originalNameUtf8.split('.').pop().toLowerCase();
 
-      // Retrieve existing folders with unique tags of files inside them to act as classification context
-      const folders = await Folder.find({});
+      // Build folders context for AI
+      const { data: folders, error: foldersErr } = await supabase.from('folders').select('*');
+      if (foldersErr) throw foldersErr;
+
       const foldersWithTags = [];
       for (const f of folders) {
-        const filesInFolder = await File.find({ folder_id: f._id }, 'ai_tags');
-        const uniqueTags = [...new Set(filesInFolder.flatMap(fi => fi.ai_tags || []))];
+        const { data: filesInFolder } = await supabase
+          .from('files').select('ai_tags').eq('folder_id', f.id);
+        const uniqueTags = [...new Set((filesInFolder || []).flatMap(fi => fi.ai_tags || []))];
         foldersWithTags.push({
           folder_name: f.name,
           subject: f.subject,
@@ -45,15 +80,11 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
       }
 
       let classification;
-
       if (isImageType(ext)) {
-        // Classify image directly via Gemini vision with existing folders context
         classification = await classifyFromImage(file.buffer, getImageMimeType(ext), foldersWithTags);
       } else {
-        // Extract text first, then classify
         const text = await extractText(file.buffer, ext);
         if (!text || text.trim().length < 10) {
-          // If text extraction failed or too short, skip AI
           classification = {
             subject: 'Chưa phân loại',
             chapter: '',
@@ -67,52 +98,96 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
         }
       }
 
-      // Find folder case-insensitively to prevent duplicates and align metadata casing
-      let folder = await Folder.findOne({
-        name: { $regex: new RegExp(`^${classification.folder_name.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }
-      });
+      // Find folder by case-insensitive name
+      const targetName = classification.folder_name.trim();
+      const { data: existing } = await supabase
+        .from('folders').select('*').ilike('name', targetName).maybeSingle();
 
-      if (folder) {
-        // Align name and metadata casing with the existing folder record
+      // Safety check: if AI returned an existing folder name but the subject
+      // doesn't match, refuse the merge and create a fresh folder instead.
+      // This prevents cross-subject grouping (e.g. Tin học into Hóa học).
+      const normalize = (s) => (s || '').trim().toLowerCase();
+      const subjectsMatch = existing
+        && normalize(existing.subject) === normalize(classification.subject);
+
+      let folder;
+      if (existing && subjectsMatch) {
+        folder = existing;
         classification.folder_name = folder.name;
         classification.subject = folder.subject;
         classification.chapter = folder.chapter;
         classification.grade = folder.grade;
+      } else if (existing && !subjectsMatch) {
+        // LLM tried to merge into a folder with a different subject.
+        // Discard LLM's bad folder_name and synthesize a clean one from
+        // its own subject/chapter so the result is sensible.
+        const subj = (classification.subject || 'Chưa rõ').trim();
+        const chap = (classification.chapter || 'Tổng quát').trim();
+        let cleanName = chap ? `${subj}/${chap}` : subj;
+
+        // Avoid clashing with another existing folder of that exact name
+        const { data: nameClash } = await supabase
+          .from('folders').select('id').ilike('name', cleanName).maybeSingle();
+        if (nameClash) {
+          cleanName = `${cleanName} ${Date.now().toString().slice(-4)}`;
+        }
+        classification.folder_name = cleanName;
+
+        const { data: created, error: createErr } = await supabase
+          .from('folders')
+          .insert({
+            name: cleanName,
+            subject: subj,
+            chapter: chap,
+            grade: classification.grade || ''
+          })
+          .select('*')
+          .single();
+        if (createErr) throw createErr;
+        folder = created;
       } else {
-        folder = new Folder({
-          name: classification.folder_name,
-          subject: classification.subject,
-          chapter: classification.chapter,
-          grade: classification.grade
-        });
-        await folder.save();
+        const { data: created, error: createErr } = await supabase
+          .from('folders')
+          .insert({
+            name: classification.folder_name,
+            subject: classification.subject || '',
+            chapter: classification.chapter || '',
+            grade: classification.grade || ''
+          })
+          .select('*')
+          .single();
+        if (createErr) throw createErr;
+        folder = created;
       }
 
-      // Upload file to storage
+      // Upload to storage
       const storageUrl = await uploadToStorage(file);
 
-      // Extract text for storage (for cheat sheet / podcast later)
+      // Extract text for cheat sheet / podcast later
       let extractedText = '';
       if (!isImageType(ext)) {
         extractedText = await extractText(file.buffer, ext) || '';
       }
 
-      // Save file record
-      const newFile = new File({
-        folder_id: folder._id,
-        original_name: originalNameUtf8,
-        storage_url: storageUrl,
-        file_type: ext,
-        file_size: file.size,
-        extracted_text: extractedText,
-        ai_summary: classification.summary,
-        ai_tags: classification.tags
-      });
-      await newFile.save();
+      const { data: newFile, error: insertErr } = await supabase
+        .from('files')
+        .insert({
+          folder_id: folder.id,
+          original_name: originalNameUtf8,
+          storage_url: storageUrl,
+          file_type: ext,
+          file_size: file.size,
+          extracted_text: extractedText,
+          ai_summary: classification.summary,
+          ai_tags: classification.tags
+        })
+        .select('*')
+        .single();
+      if (insertErr) throw insertErr;
 
       results.push({
-        file: newFile,
-        folder: folder,
+        file: toApi(newFile),
+        folder: toApi(folder),
         classification
       });
     }
@@ -124,61 +199,213 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
   }
 });
 
-/**
- * GET /api/ai/cheatsheet/:folderId
- * Generate or return cached cheat sheet
- */
+// ===========================================================================
+// GET /api/ai/cheatsheet/:folderId — generate or return cached cheat sheet
+// ===========================================================================
 router.get('/cheatsheet/:folderId', async (req, res) => {
   try {
-    const folder = await Folder.findById(req.params.folderId);
-    if (!folder) return res.status(404).json({ error: 'Folder not found' });
+    const folder = await getFolderOr404(req.params.folderId, res);
+    if (!folder) return;
 
-    // Cache check
-    if (folder.cheat_sheet_markdown) {
+    // Return cached JSON if present
+    if (folder.cheat_sheet_json) {
       return res.json({
-        markdown: folder.cheat_sheet_markdown,
+        json: folder.cheat_sheet_json,
+        markdown: folder.cheat_sheet_markdown || null,
+        template: folder.selected_template,
+        font: folder.handwriting_font,
         cached: true
       });
     }
 
-    // Gather all texts from files in this folder
-    const files = await File.find({ folder_id: folder._id });
-    const allTexts = files
-      .map(f => f.extracted_text)
-      .filter(t => t && t.trim().length > 0)
-      .join('\n\n---\n\n');
-
+    // Generate fresh
+    const allTexts = await getAllTextsForFolder(folder.id);
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({
         error: 'Không đủ nội dung văn bản trong thư mục này để tạo phao cứu cấp'
       });
     }
 
-    // Generate with AI
-    const markdown = await generateCheatSheet(allTexts);
+    let json = null;
+    try {
+      json = await generateCheatSheet(allTexts);
+    } catch (e) {
+      console.error('Cheat sheet JSON generation failed:', e.message);
+      // Legacy markdown fallback if folder has it
+      if (folder.cheat_sheet_markdown) {
+        return res.json({
+          json: null,
+          markdown: folder.cheat_sheet_markdown,
+          template: folder.selected_template,
+          font: folder.handwriting_font,
+          cached: true
+        });
+      }
+      throw e;
+    }
 
-    // Cache it
-    folder.cheat_sheet_markdown = markdown;
-    await folder.save();
+    await supabase
+      .from('folders')
+      .update({ cheat_sheet_json: json })
+      .eq('id', folder.id);
 
-    res.json({ markdown, cached: false });
+    res.json({
+      json,
+      markdown: null,
+      template: folder.selected_template,
+      font: folder.handwriting_font,
+      cached: false
+    });
   } catch (error) {
     console.error('Cheat sheet error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * POST /api/ai/podcast/:folderId
- * Generate podcast script + audio
- */
+// ===========================================================================
+// POST /api/ai/cheatsheet/:folderId/template — switch active template
+// ===========================================================================
+router.post('/cheatsheet/:folderId/template', async (req, res) => {
+  try {
+    const { template } = req.body;
+    if (!VALID_TEMPLATES.includes(template)) {
+      return res.status(400).json({ error: `template phải là một trong ${VALID_TEMPLATES.join(', ')}` });
+    }
+    const { data, error } = await supabase
+      .from('folders')
+      .update({ selected_template: template })
+      .eq('id', req.params.folderId)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Folder not found' });
+    res.json({ template: data.selected_template });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===========================================================================
+// POST /api/ai/cheatsheet/:folderId/migrate — convert legacy markdown → JSON
+// ===========================================================================
+router.post('/cheatsheet/:folderId/migrate', async (req, res) => {
+  try {
+    const folder = await getFolderOr404(req.params.folderId, res);
+    if (!folder) return;
+
+    if (folder.cheat_sheet_json) {
+      return res.json({ json: folder.cheat_sheet_json, migrated: false, message: 'Already in JSON format' });
+    }
+    if (!folder.cheat_sheet_markdown) {
+      return res.status(400).json({ error: 'No markdown to migrate' });
+    }
+
+    const json = await migrateMarkdownToJson(folder.cheat_sheet_markdown);
+    await supabase
+      .from('folders')
+      .update({ cheat_sheet_json: json })
+      .eq('id', folder.id);
+
+    res.json({ json, migrated: true });
+  } catch (error) {
+    console.error('Migrate error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===========================================================================
+// POST /api/ai/cheatsheet/:folderId/handwriting — analyze handwriting sample
+// ===========================================================================
+router.post(
+  '/cheatsheet/:folderId/handwriting',
+  handwritingUpload.single('image'),
+  async (req, res) => {
+    try {
+      const folder = await getFolderOr404(req.params.folderId, res);
+      if (!folder) return;
+      if (!req.file) return res.status(400).json({ error: 'Image is required' });
+
+      const ext = req.file.originalname.split('.').pop().toLowerCase();
+      if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+        return res.status(400).json({ error: 'Image must be jpg/png/webp' });
+      }
+
+      const mimeType = getImageMimeType(ext);
+      const sampleUrl = await uploadToStorage(req.file);
+      const analysis = await analyzeHandwriting(req.file.buffer, mimeType);
+
+      await supabase
+        .from('folders')
+        .update({
+          handwriting_font: analysis.font_family,
+          handwriting_sample_url: sampleUrl,
+          selected_template: 'sketch-notebook'
+        })
+        .eq('id', folder.id);
+
+      res.json({
+        font_family: analysis.font_family,
+        reasoning: analysis.reasoning,
+        slant: analysis.slant,
+        weight: analysis.weight,
+        sample_url: sampleUrl
+      });
+    } catch (error) {
+      console.error('Handwriting analyze error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// ===========================================================================
+// POST /api/ai/cheatsheet/:folderId/handwriting/manual — pick font manually
+// ===========================================================================
+router.post('/cheatsheet/:folderId/handwriting/manual', async (req, res) => {
+  try {
+    const VALID_FONTS = ['Caveat', 'Patrick Hand', 'Dancing Script', 'Pacifico', 'Be Vietnam Pro Italic'];
+    const { font_family } = req.body;
+    if (!VALID_FONTS.includes(font_family)) {
+      return res.status(400).json({ error: `font_family phải là một trong ${VALID_FONTS.join(', ')}` });
+    }
+    const { data, error } = await supabase
+      .from('folders')
+      .update({ handwriting_font: font_family, selected_template: 'sketch-notebook' })
+      .eq('id', req.params.folderId)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Folder not found' });
+    res.json({ font_family: data.handwriting_font });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===========================================================================
+// DELETE /api/ai/cheatsheet/:folderId — clear cache to force regeneration
+// ===========================================================================
+router.delete('/cheatsheet/:folderId', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('folders')
+      .update({ cheat_sheet_json: null, cheat_sheet_markdown: '' })
+      .eq('id', req.params.folderId);
+    if (error) throw error;
+    res.json({ message: 'Cheat sheet cache cleared' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===========================================================================
+// POST /api/ai/podcast/:folderId
+// ===========================================================================
 router.post('/podcast/:folderId', async (req, res) => {
   try {
-    const folder = await Folder.findById(req.params.folderId);
-    if (!folder) return res.status(404).json({ error: 'Folder not found' });
+    const folder = await getFolderOr404(req.params.folderId, res);
+    if (!folder) return;
 
-    // Cache check - if podcast already exists
-    if (folder.podcast_audio_url && folder.podcast_script.length > 0) {
+    if (folder.podcast_audio_url && Array.isArray(folder.podcast_script) && folder.podcast_script.length > 0) {
       return res.json({
         script: folder.podcast_script,
         audio_url: folder.podcast_audio_url,
@@ -186,23 +413,13 @@ router.post('/podcast/:folderId', async (req, res) => {
       });
     }
 
-    // Gather all texts
-    const files = await File.find({ folder_id: folder._id });
-    const allTexts = files
-      .map(f => f.extracted_text)
-      .filter(t => t && t.trim().length > 0)
-      .join('\n\n---\n\n');
-
+    const allTexts = await getAllTextsForFolder(folder.id);
     if (!allTexts || allTexts.trim().length < 20) {
-      return res.status(400).json({
-        error: 'Không đủ nội dung văn bản để tạo podcast'
-      });
+      return res.status(400).json({ error: 'Không đủ nội dung văn bản để tạo podcast' });
     }
 
-    // Generate script with AI
     const script = await generatePodcastScript(allTexts);
 
-    // Try to generate audio (may fail if TTS not configured)
     let audioUrl = null;
     try {
       audioUrl = await generatePodcastAudio(script);
@@ -210,31 +427,17 @@ router.post('/podcast/:folderId', async (req, res) => {
       console.log('TTS generation skipped:', e.message);
     }
 
-    // Cache results
-    folder.podcast_script = script;
-    folder.podcast_audio_url = audioUrl || '';
-    await folder.save();
+    await supabase
+      .from('folders')
+      .update({
+        podcast_script: script,
+        podcast_audio_url: audioUrl || ''
+      })
+      .eq('id', folder.id);
 
-    res.json({
-      script,
-      audio_url: audioUrl,
-      cached: false
-    });
+    res.json({ script, audio_url: audioUrl, cached: false });
   } catch (error) {
     console.error('Podcast error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * DELETE /api/ai/cheatsheet/:folderId
- * Clear cached cheat sheet (to regenerate)
- */
-router.delete('/cheatsheet/:folderId', async (req, res) => {
-  try {
-    await Folder.findByIdAndUpdate(req.params.folderId, { cheat_sheet_markdown: '' });
-    res.json({ message: 'Cheat sheet cache cleared' });
-  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
