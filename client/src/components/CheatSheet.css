@@ -1,0 +1,257 @@
+.cheatsheet {
+  margin-top: var(--space-md);
+}
+
+.cheatsheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.cheatsheet-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.cheatsheet-emoji {
+  font-size: 2.5rem;
+  animation: float 2s ease-in-out infinite;
+}
+
+.cheatsheet-title h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f87171, #fbbf24);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cheatsheet-folder {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.cheatsheet-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Bento Grid Layout */
+.bento-grid {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.bento-card {
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.bento-main {
+  min-width: 0;
+}
+
+/* Markdown Content Styling */
+.bento-card h1,
+.bento-card h2,
+.bento-card h3 {
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-md);
+  font-weight: 700;
+}
+
+.bento-card h1 {
+  font-size: 1.5rem;
+  color: var(--accent-secondary);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-sm);
+}
+
+.bento-card h2 {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  position: relative;
+  padding-left: var(--space-md);
+}
+.bento-card h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 3px;
+  background: var(--accent-gradient);
+  border-radius: 2px;
+}
+
+.bento-card h3 {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.bento-card p {
+  margin-bottom: var(--space-sm);
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+.bento-card ul, .bento-card ol {
+  margin: var(--space-sm) 0 var(--space-md) var(--space-lg);
+}
+
+.bento-card li {
+  margin-bottom: var(--space-xs);
+  line-height: 1.7;
+}
+
+.bento-card strong {
+  color: var(--accent-secondary);
+  font-weight: 600;
+}
+
+.bento-card code {
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--success);
+}
+
+.bento-card pre {
+  background: var(--bg-primary);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin: var(--space-md) 0;
+  border: 1px solid var(--border);
+}
+
+.bento-card pre code {
+  background: none;
+  padding: 0;
+}
+
+.bento-card blockquote {
+  border-left: 3px solid var(--accent-primary);
+  padding-left: var(--space-md);
+  margin: var(--space-md) 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.bento-card hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: var(--space-lg) 0;
+}
+
+/* KaTeX overrides for dark theme */
+.bento-card .katex {
+  color: var(--success);
+  font-size: 1.1em;
+}
+
+.bento-card .katex-display {
+  margin: var(--space-md) 0;
+  padding: var(--space-md);
+  background: rgba(52, 211, 153, 0.05);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+/* Loading State */
+.cheatsheet-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.loading-card {
+  text-align: center;
+  padding: var(--space-2xl);
+}
+
+.loading-spinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--space-lg);
+}
+
+.loading-spinner .spinner-ring {
+  width: 80px;
+  height: 80px;
+  border-width: 3px;
+}
+
+.loading-spinner .spinner-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+}
+
+.loading-card h3 {
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.loading-card p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: var(--space-lg);
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.skeleton-lg { height: 120px; grid-column: span 2; }
+.skeleton-md { height: 80px; grid-column: span 2; }
+.skeleton-sm { height: 80px; }
+
+/* Error State */
+.cheatsheet-error {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2xl);
+}
+
+.error-card {
+  text-align: center;
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  max-width: 400px;
+}
+
+.error-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: var(--space-md);
+}
+
+.error-card h3 {
+  margin-bottom: var(--space-sm);
+}
+
+.error-card p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: var(--space-lg);
+}

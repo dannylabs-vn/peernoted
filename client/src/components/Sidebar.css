@@ -1,0 +1,202 @@
+.sidebar {
+  width: 250px;
+  background: #f8fafc; /* Subtle light gray sidebar */
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 650px;
+  transition: transform 0.3s var(--ease);
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* ── macOS Title Bar Circles ── */
+.mac-dots {
+  display: flex;
+  gap: 8px;
+  padding: 24px 24px 16px 24px;
+}
+
+.mac-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mac-dots .dot.red { background: #ff5f56; }
+.mac-dots .dot.yellow { background: #ffbd2e; }
+.mac-dots .dot.green { background: #27c93f; }
+
+/* ── Section Title ── */
+.sidebar-section {
+  flex: 1;
+  padding: 8px 0;
+}
+
+.section-header {
+  padding: 0 24px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+
+.btn-add {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  transition: var(--hover-transition);
+}
+
+.btn-add:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+}
+
+/* ── Folder List ── */
+.folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: var(--hover-transition);
+  color: #4b5563;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.folder-item:hover {
+  background: rgba(0, 0, 0, 0.02);
+  color: var(--text-primary);
+}
+
+.folder-item.active {
+  background: #eef2ff; /* Custom light indigo highlight */
+  color: var(--primary); /* Vibrant primary blue */
+  font-weight: 700;
+}
+
+.btn-delete {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: var(--hover-transition);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.folder-item:hover .btn-delete {
+  opacity: 1;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* ── Folder Create Form ── */
+.create-form {
+  padding: 0 24px 16px 24px;
+}
+
+.create-form input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 0.8rem;
+  outline: none;
+  background: #ffffff;
+  transition: border-color 0.2s;
+}
+
+.create-form input:focus {
+  border-color: var(--primary);
+}
+
+/* ── AI Classification Section ── */
+.sidebar-classification {
+  padding: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.class-header {
+  margin-bottom: 12px;
+}
+
+.class-title {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+
+.class-progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.class-status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.class-percent {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.class-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.class-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  transition: width 0.4s var(--ease);
+}
