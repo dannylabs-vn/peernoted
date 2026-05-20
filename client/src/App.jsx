@@ -974,13 +974,23 @@ function App() {
                           </div>
                         ) : (
                           folders.map((folder, index) => {
-                            const hasCheatSheet = !!folder.cheat_sheet_markdown;
+                            const hasJson = !!folder.cheat_sheet_json;
+                            const hasMarkdown = !!folder.cheat_sheet_markdown;
+                            const hasCheatSheet = hasJson || hasMarkdown;
                             const color = colors[index % colors.length];
-                            
-                            // Estimate dynamic formula/term count
+
+                            // Derive formula/term counts from whichever format is present
                             let formulaCount = 0;
                             let termCount = 0;
-                            if (hasCheatSheet) {
+                            if (hasJson) {
+                              const sections = folder.cheat_sheet_json.sections || [];
+                              for (const sec of sections) {
+                                for (const b of (sec.blocks || [])) {
+                                  if (b.type === 'formula') formulaCount++;
+                                  else if (b.type === 'definition') termCount++;
+                                }
+                              }
+                            } else if (hasMarkdown) {
                               const lines = folder.cheat_sheet_markdown.split('\n');
                               formulaCount = lines.filter(l => l.includes('=') || l.includes('+') || l.includes('-')).length || 6;
                               termCount = lines.filter(l => l.includes(':') || l.includes('*') || l.includes(' - ')).length || 10;

@@ -36,6 +36,20 @@ export const classifyFiles = (files) => {
 
 export const getCheatSheet = (folderId) => API.get(`/ai/cheatsheet/${folderId}`);
 export const clearCheatSheet = (folderId) => API.delete(`/ai/cheatsheet/${folderId}`);
+export const setCheatSheetTemplate = (folderId, template) =>
+  API.post(`/ai/cheatsheet/${folderId}/template`, { template });
+export const migrateCheatSheet = (folderId) =>
+  API.post(`/ai/cheatsheet/${folderId}/migrate`);
+export const analyzeHandwriting = (folderId, file) => {
+  const fd = new FormData();
+  fd.append('image', file);
+  return API.post(`/ai/cheatsheet/${folderId}/handwriting`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
+export const pickHandwritingFontManual = (folderId, fontFamily) =>
+  API.post(`/ai/cheatsheet/${folderId}/handwriting/manual`, { font_family: fontFamily });
+
 export const generatePodcast = (folderId) => API.post(`/ai/podcast/${folderId}`);
 
 export default API;
