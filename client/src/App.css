@@ -339,14 +339,12 @@
 }
 
 .db-logo-icon {
-  width: 24px;
-  height: 24px;
-  background: #0f172a;
-  border-radius: 6px;
+  width: 72px;
+  height: 48px;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
 }
 
 .db-version {
@@ -788,6 +786,7 @@
 }
 
 .quick-folder-card {
+  position: relative;
   background: #ffffff;
   border: 1px solid rgba(0,0,0,0.06);
   border-radius: 12px;
@@ -2049,3 +2048,276 @@
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   11. PODCAST DUAL MODE & EXPLORE (NHÁNH 2)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Mode Switcher */
+.podcast-mode-switcher {
+  display: flex;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 8px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+.podcast-mode-pill {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.podcast-mode-pill:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.podcast-mode-pill.active {
+  background: #fff;
+  color: var(--brand-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Explore Layout */
+.explore-layout {
+  display: flex;
+  gap: 24px;
+  min-height: 500px;
+}
+
+.explore-folders-sidebar {
+  flex: 0 0 280px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.explore-folders-sidebar h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.folder-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.folder-compact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid rgba(0,0,0,0.03);
+  transition: all 0.2s ease;
+}
+
+.folder-compact-item:hover {
+  border-color: rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+.folder-compact-item.active {
+  background: var(--brand-primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+}
+
+.folder-compact-item.active .fc-name {
+  color: #fff;
+}
+
+.fc-icon {
+  font-size: 1.1rem;
+}
+
+.fc-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.explore-results-area {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+/* States */
+.explore-empty-state,
+.explore-loading,
+.explore-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+}
+
+.explore-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.explore-header p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+/* Recommend Cards */
+.reco-grid-title {
+  font-size: 1.25rem;
+  margin-bottom: 20px;
+}
+
+.reco-grid-title span {
+  color: var(--brand-primary);
+}
+
+.reco-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.reco-card {
+  padding: 20px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.reco-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+}
+
+.reco-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.reco-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reco-badge {
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.reco-badge.type-video { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.reco-badge.type-podcast { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
+.reco-badge.type-article { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.reco-badge.lang { background: rgba(0, 0, 0, 0.05); color: var(--text-secondary); }
+
+.reco-source {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand-secondary);
+  background: rgba(56, 189, 248, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.reco-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.reco-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.reco-topic {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.btn-reco-link {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  background: var(--brand-primary);
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-reco-link:hover {
+  background: #6d28d9;
+  color: #fff;
+}
+
+/* Regen Button in AudioPlayer */
+.regen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 12px;
+}
+
+.regen-btn:hover {
+  background: rgba(0,0,0,0.08);
+  color: var(--text-primary);
+}
+

@@ -17,14 +17,25 @@ const MODELS_TO_TRY = [
 async function generateWithFallback(promptOrParts) {
   let lastError = null;
   for (const modelName of MODELS_TO_TRY) {
-    try {
-      console.log(`[AI] Attempting content generation with model: ${modelName}`);
-      const modelInstance = genAI.getGenerativeModel({ model: modelName });
-      const result = await modelInstance.generateContent(promptOrParts);
-      return result;
-    } catch (err) {
-      console.warn(`[AI Fallback] Model ${modelName} failed: ${err.message}. Trying next...`);
-      lastError = err;
+    let retries = 2; // Try each model up to 2 times
+    while (retries > 0) {
+      try {
+        console.log(`[AI] Attempting content generation with model: ${modelName}`);
+        const modelInstance = genAI.getGenerativeModel({ model: modelName });
+        const result = await modelInstance.generateContent(promptOrParts);
+        return result;
+      } catch (err) {
+        lastError = err;
+        const isRateLimitOr503 = err.status === 503 || err.status === 429 || err.message.includes('503') || err.message.includes('429') || err.message.includes('quota');
+        if (isRateLimitOr503 && retries > 1) {
+          console.warn(`[AI] Model ${modelName} hit 503/429. Retrying in 3 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          retries--;
+        } else {
+          console.warn(`[AI Fallback] Model ${modelName} failed: ${err.message}. Trying next...`);
+          break; // Break the while loop to try the next model
+        }
+      }
     }
   }
   throw new Error(`All Gemini models failed. Last error: ${lastError ? lastError.message : 'Unknown error'}`);
@@ -69,10 +80,35 @@ async function generateCheatSheet(allTexts) {
  * Generate podcast script from all texts in a folder
  */
 async function generatePodcastScript(allTexts) {
-  const prompt = PROMPTS.generatePodcastScript(allTexts);
+  // Step 1: Summarize the text first to extract key points
+  console.log('[AI] Step 1: Summarizing text for podcast...');
+  const summaryPrompt = `Hãy đọc tài liệu học tập sau và trích xuất TOÀN BỘ các kiến thức, sự kiện, khái niệm cốt lõi. Đảm bảo tính chính xác tuyệt đối về mặt học thuật (đặc biệt với môn Lịch sử, Khoa học). Độ dài của bản tóm tắt cần tỷ lệ thuận với lượng kiến thức trong tài liệu gốc (không giới hạn từ, đảm bảo đúng và đủ):\n\n${allTexts.substring(0, 30000)}`;
+  const summaryResult = await generateWithFallback(summaryPrompt);
+  const summary = summaryResult.response.text();
+
+  // Step 2: Generate the script based on the summary
+  console.log('[AI] Step 2: Generating podcast script from summary...');
+  const prompt = PROMPTS.generatePodcastScript(summary);
   const result = await generateWithFallback(prompt);
   const response = result.response.text();
   return parseJSON(response);
+}
+
+/**
+ * Generate learning resource recommendations based on document content
+ * Returns array of recommended videos, podcasts, articles (VI + EN)
+ */
+async function generateResourceRecommendations(allTexts) {
+  const prompt = PROMPTS.recommendResources(allTexts);
+  const result = await generateWithFallback(prompt);
+  const response = result.response.text();
+  const recommendations = parseJSON(response);
+
+  // Enrich each recommendation with a ready-to-use YouTube search URL
+  return recommendations.map(rec => ({
+    ...rec,
+    youtube_url: `https://www.youtube.com/results?search_query=${encodeURIComponent(rec.search_query)}`,
+  }));
 }
 
 /**
@@ -97,5 +133,6 @@ module.exports = {
   classifyFromText,
   classifyFromImage,
   generateCheatSheet,
-  generatePodcastScript
+  generatePodcastScript,
+  generateResourceRecommendations
 };

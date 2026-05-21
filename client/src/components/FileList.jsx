@@ -42,7 +42,7 @@ function decodeFilename(str) {
 }
 
 
-export default function FileList({ files, onRefresh }) {
+export default function FileList({ files, onRefresh, onPlayPodcast }) {
   const handleDelete = async (fileId) => {
     if (!confirm('Xóa file này?')) return
     try {
@@ -112,7 +112,32 @@ export default function FileList({ files, onRefresh }) {
             {formatDate(file.createdAt)}
           </div>
 
-          <div className="file-col-actions">
+          <div className="file-col-actions" style={{ display: 'flex', gap: '8px' }}>
+            {onPlayPodcast && (
+              <button
+                className="btn-podcast-action"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPlayPodcast(file);
+                }}
+                title="Tạo/Nghe Podcast"
+                style={{
+                  background: 'rgba(124, 58, 237, 0.1)',
+                  color: '#7c3aed',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                🎙️ Podcast
+              </button>
+            )}
             <button
               className="btn-delete-row"
               onClick={() => handleDelete(file._id)}

@@ -33,6 +33,14 @@ const fileSchema = new mongoose.Schema({
   ai_tags: {
     type: [String],
     default: []
+  },
+  podcast_audio_url: {
+    type: String,
+    default: ''
+  },
+  podcast_script: {
+    type: Array,
+    default: []
   }
 }, {
   timestamps: true

@@ -7,6 +7,7 @@ const connectDB = require('./config/db');
 const folderRoutes = require('./routes/folders');
 const fileRoutes = require('./routes/files');
 const aiRoutes = require('./routes/ai');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/ai', aiRoutes);

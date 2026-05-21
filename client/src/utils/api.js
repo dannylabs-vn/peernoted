@@ -2,8 +2,28 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: '/api',
-  timeout: 120000 // 2 min for AI processing
+  timeout: 300000 // 5 min for AI processing & TTS generation
 });
+
+// Request interceptor for API calls
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ===== AUTH =====
+export const login = (data) => API.post('/auth/login', data);
+export const register = (data) => API.post('/auth/register', data);
+export const loginWithGoogle = (data) => API.post('/auth/google', data);
+export const getMe = () => API.get('/auth/me');
 
 // ===== FOLDERS =====
 export const getFolders = () => API.get('/folders');
@@ -37,5 +57,7 @@ export const classifyFiles = (files) => {
 export const getCheatSheet = (folderId) => API.get(`/ai/cheatsheet/${folderId}`);
 export const clearCheatSheet = (folderId) => API.delete(`/ai/cheatsheet/${folderId}`);
 export const generatePodcast = (folderId) => API.post(`/ai/podcast/${folderId}`);
+export const clearPodcast = (folderId) => API.delete(`/ai/podcast/${folderId}`);
+export const getRecommendations = (folderId) => API.post(`/ai/recommend/${folderId}`);
 
 export default API;

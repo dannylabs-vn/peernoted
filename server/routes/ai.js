@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const Folder = require('../models/Folder');
 const File = require('../models/File');
-const { classifyFromText, classifyFromImage, generateCheatSheet, generatePodcastScript } = require('../services/aiService');
+const { classifyFromText, classifyFromImage, generateCheatSheet, generatePodcastScript, generateResourceRecommendations } = require('../services/aiService');
 const { extractText, isImageType, getImageMimeType } = require('../services/extractorService');
 const { uploadToStorage } = require('../services/storageService');
 const { generatePodcastAudio } = require('../services/ttsService');
@@ -178,7 +178,7 @@ router.post('/podcast/:folderId', async (req, res) => {
     if (!folder) return res.status(404).json({ error: 'Folder not found' });
 
     // Cache check - if podcast already exists
-    if (folder.podcast_audio_url && folder.podcast_script.length > 0) {
+    if (folder.podcast_audio_url && folder.podcast_script && folder.podcast_script.length > 0) {
       return res.json({
         script: folder.podcast_script,
         audio_url: folder.podcast_audio_url,
@@ -186,12 +186,9 @@ router.post('/podcast/:folderId', async (req, res) => {
       });
     }
 
-    // Gather all texts
-    const files = await File.find({ folder_id: folder._id });
-    const allTexts = files
-      .map(f => f.extracted_text)
-      .filter(t => t && t.trim().length > 0)
-      .join('\n\n---\n\n');
+    // Get text from all files in folder
+    const files = await File.find({ folder_id: req.params.folderId });
+    const allTexts = files.map(f => f.extracted_text).join('\n\n');
 
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({
@@ -234,6 +231,74 @@ router.delete('/cheatsheet/:folderId', async (req, res) => {
   try {
     await Folder.findByIdAndUpdate(req.params.folderId, { cheat_sheet_markdown: '' });
     res.json({ message: 'Cheat sheet cache cleared' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/ai/podcast/:folderId
+ * Clear cached podcast (to regenerate)
+ */
+router.delete('/podcast/:folderId', async (req, res) => {
+  try {
+    await Folder.findByIdAndUpdate(req.params.folderId, {
+      podcast_script: [],
+      podcast_audio_url: ''
+    });
+    res.json({ message: 'Podcast cache cleared' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/ai/recommend/:folderId
+ * Generate learning resource recommendations based on folder content
+ */
+router.post('/recommend/:folderId', async (req, res) => {
+  try {
+    const folder = await Folder.findById(req.params.folderId);
+    if (!folder) return res.status(404).json({ error: 'Folder not found' });
+
+    // Gather all texts from files in this folder
+    const files = await File.find({ folder_id: folder._id });
+    const allTexts = files
+      .map(f => f.extracted_text)
+      .filter(t => t && t.trim().length > 0)
+      .join('\n\n---\n\n');
+
+    if (!allTexts || allTexts.trim().length < 20) {
+      return res.status(400).json({
+        error: 'Không đủ nội dung văn bản để tạo gợi ý tài nguyên học tập'
+      });
+    }
+
+    // Generate recommendations with AI
+    const recommendations = await generateResourceRecommendations(allTexts);
+
+    res.json({
+      recommendations,
+      folder_name: folder.name,
+      folder_subject: folder.subject
+    });
+  } catch (error) {
+    console.error('Recommend error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/ai/podcast-all
+ * Clear ALL cached podcasts across all files (utility for re-generating with new TTS engine)
+ */
+router.delete('/podcast-all', async (req, res) => {
+  try {
+    const result = await File.updateMany(
+      { $or: [{ podcast_audio_url: { $ne: '' } }, { 'podcast_script.0': { $exists: true } }] },
+      { podcast_script: [], podcast_audio_url: '' }
+    );
+    res.json({ message: `Cleared podcast cache for ${result.modifiedCount} file(s)` });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

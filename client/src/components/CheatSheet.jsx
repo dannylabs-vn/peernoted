@@ -12,10 +12,6 @@ export default function CheatSheet({ folderId, folderName }) {
   const [error, setError] = useState(null)
   const [cached, setCached] = useState(false)
 
-  useEffect(() => {
-    loadCheatSheet()
-  }, [folderId])
-
   const loadCheatSheet = async () => {
     setLoading(true)
     setError(null)
@@ -29,6 +25,10 @@ export default function CheatSheet({ folderId, folderName }) {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadCheatSheet()
+  }, [folderId])
 
   const handleRegenerate = async () => {
     try {
