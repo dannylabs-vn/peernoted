@@ -116,7 +116,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
             tags: ['cần-OCR']
           };
         } else {
-          classification = await classifyFromText(text, foldersWithTags);
+          classification = await classifyFromText(text, foldersWithTags, originalNameUtf8);
         }
       }
 
@@ -250,7 +250,7 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
 
     let json = null;
     try {
-      json = await generateCheatSheet(allTexts);
+      json = await generateCheatSheet(allTexts, folder.name);
     } catch (e) {
       console.error('Cheat sheet JSON generation failed:', e.message);
       // Legacy markdown fallback if folder has it
@@ -440,7 +440,7 @@ router.post('/podcast/:folderId', async (req, res) => {
       return res.status(400).json({ error: 'Không đủ nội dung văn bản để tạo podcast' });
     }
 
-    const script = await generatePodcastScript(allTexts);
+    const script = await generatePodcastScript(allTexts, folder.name);
 
     let audioUrl = null;
     try {
@@ -493,7 +493,7 @@ router.post('/recommend/:folderId', async (req, res) => {
       return res.status(400).json({ error: 'Không đủ nội dung văn bản để gợi ý tài nguyên' });
     }
 
-    const items = await generateResourceRecommendations(allTexts);
+    const items = await generateResourceRecommendations(allTexts, folder.name);
     res.json({ items });
   } catch (error) {
     console.error('Recommend error:', error);

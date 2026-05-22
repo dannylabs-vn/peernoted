@@ -37,13 +37,13 @@ function imageMessagePart(buffer, mimeType) {
   };
 }
 
-async function classifyFromText(text, existingFolders) {
+async function classifyFromText(text, existingFolders, filename = '') {
   return chatJSON({
     model: TEXT_MODEL,
     schema: SCHEMAS.CLASSIFY_SCHEMA,
     messages: [
       { role: 'system', content: 'Bạn là trợ lý AI phân loại tài liệu giáo dục. Trả về theo schema JSON đã định nghĩa.' },
-      { role: 'user', content: PROMPTS.classifyFile(text, existingFolders) }
+      { role: 'user', content: PROMPTS.classifyFile(text, existingFolders, filename) }
     ]
   });
 }
@@ -65,13 +65,13 @@ async function classifyFromImage(imageBuffer, mimeType, existingFolders) {
   });
 }
 
-async function generateCheatSheet(allTexts) {
+async function generateCheatSheet(allTexts, folderName = '') {
   return chatJSON({
     model: TEXT_MODEL,
     schema: SCHEMAS.CHEAT_SHEET_SCHEMA,
     messages: [
       { role: 'system', content: 'Bạn là thủ khoa tạo phao cứu cấp. Trả về theo schema JSON đã định nghĩa.' },
-      { role: 'user', content: PROMPTS.generateCheatSheet(allTexts) }
+      { role: 'user', content: PROMPTS.generateCheatSheet(allTexts, folderName) }
     ]
   });
 }
@@ -98,7 +98,7 @@ async function summarizeForPodcast(allTexts) {
   return completion.choices[0].message.content;
 }
 
-async function generatePodcastScript(allTexts) {
+async function generatePodcastScript(allTexts, folderName = '') {
   // Step 1: extract a faithful knowledge summary
   console.log('[AI] Podcast step 1/2: summarizing...');
   const summary = await summarizeForPodcast(allTexts);
@@ -110,19 +110,19 @@ async function generatePodcastScript(allTexts) {
     schema: SCHEMAS.PODCAST_SCRIPT_SCHEMA,
     messages: [
       { role: 'system', content: 'Bạn là biên kịch podcast giáo dục. Trả về theo schema JSON đã định nghĩa.' },
-      { role: 'user', content: PROMPTS.generatePodcastScript(summary) }
+      { role: 'user', content: PROMPTS.generatePodcastScript(summary, folderName) }
     ]
   });
   return out.lines;
 }
 
-async function generateResourceRecommendations(allTexts) {
+async function generateResourceRecommendations(allTexts, folderName = '') {
   const out = await chatJSON({
     model: TEXT_MODEL,
     schema: SCHEMAS.RECOMMENDATIONS_SCHEMA,
     messages: [
       { role: 'system', content: 'Bạn là chuyên gia tư vấn học thuật. Trả về theo schema JSON đã định nghĩa.' },
-      { role: 'user', content: PROMPTS.recommendResources(allTexts) }
+      { role: 'user', content: PROMPTS.recommendResources(allTexts, folderName) }
     ]
   });
   // Enrich each item with a ready-to-use YouTube search URL

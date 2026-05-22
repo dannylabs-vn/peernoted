@@ -1,6 +1,6 @@
 const PROMPTS = {
   // Smart Organizer - Classify file content
-  classifyFile: (text, existingFolders = []) => {
+  classifyFile: (text, existingFolders = [], filename = '') => {
     let foldersContext = "";
     if (existingFolders && existingFolders.length > 0) {
       foldersContext = `
@@ -29,11 +29,15 @@ CẢNH BÁO QUAN TRỌNG: KHÔNG được merge tài liệu vào thư mục có 
 
     return `Bạn là trợ lý AI chuyên phân loại tài liệu giáo dục.
 
+Tên file: ${filename || 'Không rõ'}
+
 Hãy đọc nội dung tài liệu sau và phân tích:
 ---
 ${text.substring(0, 4000)}
 ---
 ${foldersContext}
+
+LƯU Ý: Nếu nội dung tài liệu bị trống / chỉ là số trang / vô nghĩa, HÃY DỰA VÀO TÊN FILE ở trên để suy đoán môn học, chương, khối lớp. VD tên file "tron-bo-cong-thuc-toan-cap-3.pdf" → môn Toán cấp 3.
 
 Trả về các trường:
 - subject: Tên môn học (VD: Toán, Vật lý, Hóa học, Sinh học, Lịch sử, Địa lý, Ngữ văn, Tiếng Anh...)
@@ -70,7 +74,7 @@ Trả về các trường: subject, chapter, grade, folder_name, summary (2 câu
   },
 
   // Cheat Sheet Generator - JSON structured output
-  generateCheatSheet: (allTexts) => `Bạn là một thủ khoa xuất sắc đang tạo phao cứu cấp TOÀN DIỆN cho kỳ thi.
+  generateCheatSheet: (allTexts, folderName = '') => `Bạn là một thủ khoa xuất sắc đang tạo phao cứu cấp TOÀN DIỆN cho kỳ thi về chủ đề: ${folderName || 'Không rõ'}.
 
 Đọc TOÀN BỘ tài liệu dưới đây và tổng hợp kiến thức trọng tâm thành phao cứu cấp có cấu trúc:
 
@@ -100,10 +104,12 @@ QUY TẮC SỐNG CÒN — ĐỌC KỸ:
 6. Code mẫu (HTML/Python/SQL...) đặt vào "example" hoặc "formula", giữ syntax chính xác.
 7. Viết bằng tiếng Việt, ngắn gọn nhưng KHÔNG HỜI HỢT — đủ chi tiết để học sinh hiểu khi xem lại.
 
-CẢNH BÁO: KHÔNG được dừng sớm. Tài liệu càng dài, phao càng dày. Đừng tóm tắt chỉ 3-4 mục đầu rồi bỏ phần còn lại.`,
+CẢNH BÁO: KHÔNG được dừng sớm. Tài liệu càng dài, phao càng dày. Đừng tóm tắt chỉ 3-4 mục đầu rồi bỏ phần còn lại.
+
+FALLBACK: Nếu nội dung TÀI LIỆU bị trống / chỉ là số trang / vô nghĩa, HÃY DÙNG KIẾN THỨC CỦA BẠN để tạo phao toàn diện cho chủ đề "${folderName}". Tuyệt đối không từ chối hoặc tạo phao rỗng.`,
 
   // Podcast Script Generator
-  generatePodcastScript: (allTexts) => `Bạn là biên kịch Podcast giáo dục. Viết kịch bản nói chuyện giữa 2 MC:
+  generatePodcastScript: (allTexts, folderName = '') => `Bạn là biên kịch Podcast giáo dục. Viết kịch bản nói chuyện giữa 2 MC về chủ đề: ${folderName || 'Không rõ'}
 - MC_A (Nam, tên là Minh): Người hỏi, tò mò, hay đặt câu hỏi thú vị
 - MC_B (Nữ, tên là Lan): Người giải thích, hóm hỉnh, dùng ví dụ đời thường dễ hiểu
 
@@ -121,6 +127,8 @@ YÊU CẦU QUAN TRỌNG ĐỂ CÓ GIỌNG ĐỌC TỰ NHIÊN:
 - Số lượt thoại LINH HOẠT (10-30 lượt) phù hợp dung lượng tài liệu gốc.
 - Mỗi câu thoại tự nhiên như nói chuyện đời thường, vui vẻ, gần gũi.
 
+FALLBACK: Nếu nội dung tài liệu tham khảo bị trống / vô nghĩa, hãy TỰ BIÊN KỊCH một tập podcast cực hay bằng kiến thức của bạn về chủ đề "${folderName}".
+
 Trả về object có field "lines" là mảng các lượt thoại, mỗi item có speaker ("MC_A" hoặc "MC_B") và text.`,
 
   // Two-step podcast: step 1 — extract knowledge as a faithful summary
@@ -129,7 +137,7 @@ Trả về object có field "lines" là mảng các lượt thoại, mỗi item 
 ${allTexts.substring(0, 30000)}`,
 
   // Learning Resource Recommender
-  recommendResources: (allTexts) => `Bạn là chuyên gia tư vấn học thuật. Đọc nội dung tài liệu dưới đây và gợi ý các nguồn tài nguyên học tập phù hợp nhất.
+  recommendResources: (allTexts, folderName = '') => `Bạn là chuyên gia tư vấn học thuật. Đọc nội dung tài liệu dưới đây và gợi ý các nguồn tài nguyên học tập phù hợp nhất cho chủ đề: ${folderName || 'Không rõ'}.
 
 ---TÀI LIỆU---
 ${allTexts.substring(0, 15000)}

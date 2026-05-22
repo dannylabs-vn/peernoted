@@ -689,7 +689,11 @@ function App() {
 
                   <div className="folder-subview-area">
                     {view === 'files' && (
-                      <FileList files={files} onRefresh={() => loadFiles(selectedFolder._id)} />
+                      <FileList
+                        files={files}
+                        onRefresh={() => loadFiles(selectedFolder._id)}
+                        onPlayPodcast={() => setView('podcast')}
+                      />
                     )}
                     {view === 'cheatsheet' && (
                       <CheatSheet folderId={selectedFolder._id} folderName={decodeString(selectedFolder.name)} />
