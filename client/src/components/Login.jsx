@@ -199,34 +199,39 @@ export default function Login({ onLoginSuccess, onBack }) {
             </button>
           </form>
 
-          <div className="auth-divider">
-            <span>hoặc</span>
-          </div>
-
-          <div className="google-login-wrapper" style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
-            <GoogleLogin
-              onSuccess={async (credentialResponse) => {
-                try {
-                  setLoading(true);
-                  const res = await loginWithGoogle({ credential: credentialResponse.credential });
-                  localStorage.setItem('token', res.data.token);
-                  localStorage.setItem('user', JSON.stringify(res.data));
-                  onLoginSuccess(res.data);
-                } catch (err) {
-                  setError(err.response?.data?.error || 'Đăng nhập Google thất bại.');
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              onError={() => {
-                setError('Đăng nhập Google bị lỗi.');
-              }}
-              theme="outline"
-              size="large"
-              width="100%"
-              text="continue_with"
-            />
-          </div>
+          {/* Only render Google login when a real client ID is configured */}
+          {import.meta.env.VITE_GOOGLE_CLIENT_ID &&
+           !import.meta.env.VITE_GOOGLE_CLIENT_ID.startsWith('dummy-') && (
+            <>
+              <div className="auth-divider">
+                <span>hoặc</span>
+              </div>
+              <div className="google-login-wrapper" style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    try {
+                      setLoading(true);
+                      const res = await loginWithGoogle({ credential: credentialResponse.credential });
+                      localStorage.setItem('token', res.data.token);
+                      localStorage.setItem('user', JSON.stringify(res.data));
+                      onLoginSuccess(res.data);
+                    } catch (err) {
+                      setError(err.response?.data?.error || 'Đăng nhập Google thất bại.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  onError={() => {
+                    setError('Đăng nhập Google bị lỗi.');
+                  }}
+                  theme="outline"
+                  size="large"
+                  width="100%"
+                  text="continue_with"
+                />
+              </div>
+            </>
+          )}
 
           <p className="auth-toggle-text">
             {isLoginView ? 'Chưa có tài khoản? ' : 'Đã có tài khoản? '}
