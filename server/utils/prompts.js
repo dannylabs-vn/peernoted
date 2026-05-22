@@ -1,6 +1,6 @@
 const PROMPTS = {
   // Smart Organizer - Classify file content
-  classifyFile: (text, existingFolders = []) => {
+  classifyFile: (text, existingFolders = [], filename = "") => {
     let foldersContext = "";
     if (existingFolders && existingFolders.length > 0) {
       foldersContext = `
@@ -17,6 +17,8 @@ YÊU CẦU QUAN TRỌNG VỀ PHÂN LOẠI:
     }
 
     return `Bạn là trợ lý AI chuyên phân loại tài liệu giáo dục.
+
+Tên file: ${filename || 'Không rõ'}
 
 Hãy đọc nội dung tài liệu sau và phân tích:
 ---
@@ -69,9 +71,9 @@ Trả về JSON (KHÔNG có markdown code block, CHỈ JSON thuần):
   },
 
   // Cheat Sheet Generator
-  generateCheatSheet: (allTexts) => `Bạn là một thủ khoa xuất sắc. Hãy đọc toàn bộ tài liệu dưới đây và trích xuất kiến thức trọng tâm.
+  generateCheatSheet: (allTexts, folderName = "") => `Bạn là một thủ khoa xuất sắc. Nhiệm vụ của bạn là tạo Phao Cứu Cấp cho chủ đề: ${folderName || 'Không rõ'}
 
----TOÀN BỘ TÀI LIỆU---
+---TÀI LIỆU THAM KHẢO---
 ${allTexts.substring(0, 30000)}
 ---HẾT TÀI LIỆU---
 
@@ -81,37 +83,41 @@ YÊU CẦU:
 3. Các mốc sự kiện/dữ liệu xương máu (nếu có)
 4. Mẹo ghi nhớ nhanh
 
+LƯU Ý QUAN TRỌNG: Nếu nội dung "TÀI LIỆU THAM KHẢO" ở trên bị trống, toàn số thứ tự, hoặc không có ý nghĩa, HÃY SỬ DỤNG KIẾN THỨC CỦA CHÍNH BẠN để tạo ra một bản tóm tắt công thức và kiến thức trọng tâm cực kỳ chi tiết cho chủ đề "${folderName}", tuyệt đối không được từ chối trả lời!
+
 Trả về định dạng MARKDOWN phân cấp mạch lạc với heading ##, ###, danh sách gạch đầu dòng.
 Viết ngắn gọn, súc tích - đây là tài liệu ôn tập nhanh trước giờ thi.`,
 
   // Podcast Script Generator
-  generatePodcastScript: (allTexts) => `Bạn là biên kịch Podcast giáo dục. Viết kịch bản nói chuyện giữa 2 MC:
-- MC_A (Nam - tên là Minh): Người hỏi, tò mò, hay đặt câu hỏi thú vị
-- MC_B (Nữ - tên là Lan): Người giải thích, hóm hỉnh, dùng ví dụ đời thường dễ hiểu
+  generatePodcastScript: (allTexts, folderName = "") => `Bạn là biên kịch Podcast giáo dục. Viết kịch bản nói chuyện giữa 2 MC về chủ đề: ${folderName || 'Không rõ'}
+- MC_A (Nam, tên là Minh): Người hỏi, tò mò, hay đặt câu hỏi thú vị
+- MC_B (Nữ, tên là Lan): Người giải thích, hóm hỉnh, dùng ví dụ đời thường dễ hiểu
 
 Nội dung dựa trên tài liệu:
 ---
-${allTexts.substring(0, 20000)}
+${allTexts.substring(0, 15000)}
 ---
 
 YÊU CẦU QUAN TRỌNG ĐỂ CÓ GIỌNG ĐỌC TỰ NHIÊN:
 - Xưng hô với nhau là Minh và Lan (hoặc cậu/tớ), TUYỆT ĐỐI KHÔNG gọi nhau là A hay B.
-- Với các CHỮ VIẾT TẮT tiếng Anh (ví dụ: MC, GPA, STEM, IELTS...), hãy viết theo cách phát âm tiếng Việt (ví dụ: "em xi", "điểm G P A", "xì tem", "ai eo") để máy đọc không bị đánh vần từng chữ cái.
-- TUY NHIÊN, với các TỪ VỰNG HOẶC CỤM TỪ tiếng Anh hoàn chỉnh (ví dụ: "Personal Statement", "Depth over Ambition"), PHẢI GIỮ NGUYÊN bản tiếng Anh. Không được phiên âm tiếng Việt vì giọng đọc AI có thể tự phát âm chuẩn tiếng Anh.
 - Kịch bản phải SÁNG TẠO, lôi cuốn, có những màn tung hứng, phản biện hoặc ví dụ hài hước để kích thích tư duy.
 - Kiến thức (đặc biệt là môn Lịch sử, Khoa học) phải ĐẢM BẢO CHÍNH XÁC 100%, đúng sự thật lịch sử và ĐẦY ĐỦ các ý quan trọng từ tài liệu.
-- Số lượng lượt thoại LINH HOẠT (từ 10 đến 30 lượt) PHÙ HỢP VỚI DUNG LƯỢNG của tài liệu gốc. Tài liệu càng sâu và dài thì podcast càng chi tiết.
-- Mỗi câu thoại tự nhiên như đang giao tiếp đời thường. Giọng điệu vui vẻ, gần gũi.
+- Số lượng lượt thoại từ 10 đến 16 lượt để nội dung cô đọng.
 
-Trả về JSON (KHÔNG có markdown code block, CHỈ JSON thuần):
-[
-  {"speaker": "MC_A", "text": "Ê, hôm nay mình nói về..."},
-  {"speaker": "MC_B", "text": "Ừ, cái này hay lắm..."},
-  ...
-]`,
+LƯU Ý QUAN TRỌNG: Nếu nội dung tài liệu tham khảo ở trên bị trống hoặc vô nghĩa, hãy TỰ BIÊN KỊCH một tập podcast cực hay bằng kiến thức của chính bạn về chủ đề "${folderName}"!
+
+TUYỆT ĐỐI TUÂN THỦ ĐỊNH DẠNG SAU (KHÔNG DÙNG JSON):
+MC_A|||Nội dung thoại của MC A
+MC_B|||Nội dung thoại của MC B
+
+Ví dụ:
+MC_A|||Chào Lan, hôm nay mình có chủ đề gì thú vị vậy?
+MC_B|||Chào Minh! Hôm nay mình sẽ nói về một thứ rất hay, đó là Personal Statement!
+
+Chú ý: Không xuất ra bất kỳ cái gì khác ngoài các dòng định dạng trên.`,
 
   // Learning Resource Recommender
-  recommendResources: (allTexts) => `Bạn là chuyên gia tư vấn học thuật. Hãy đọc nội dung tài liệu dưới đây và gợi ý các nguồn tài nguyên học tập phù hợp nhất.
+  recommendResources: (allTexts, folderName = "") => `Bạn là chuyên gia tư vấn học thuật. Hãy đọc nội dung tài liệu dưới đây và gợi ý các nguồn tài nguyên học tập phù hợp nhất cho chủ đề: ${folderName || 'Không rõ'}
 
 ---TÀI LIỆU---
 ${allTexts.substring(0, 15000)}
@@ -125,6 +131,8 @@ YÊU CẦU:
    - Bài viết / khóa học trực tuyến
 3. Chia đều: 3-4 nguồn Tiếng Việt + 3-4 nguồn Tiếng Anh
 4. Mỗi gợi ý phải có từ khóa tìm kiếm YouTube cụ thể, chính xác
+
+LƯU Ý QUAN TRỌNG: Nếu tài liệu tham khảo bị trống hoặc không rõ nghĩa, hãy tự đưa ra gợi ý xuất sắc nhất dựa trên chủ đề "${folderName}".
 
 Trả về JSON (KHÔNG có markdown code block, CHỈ JSON thuần):
 [

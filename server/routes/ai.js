@@ -63,7 +63,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
             tags: []
           };
         } else {
-          classification = await classifyFromText(text, foldersWithTags);
+          classification = await classifyFromText(text, foldersWithTags, originalNameUtf8);
         }
       }
 
@@ -155,7 +155,7 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
     }
 
     // Generate with AI
-    const markdown = await generateCheatSheet(allTexts);
+    const markdown = await generateCheatSheet(allTexts, folder.name);
 
     // Cache it
     folder.cheat_sheet_markdown = markdown;
@@ -197,7 +197,7 @@ router.post('/podcast/:folderId', async (req, res) => {
     }
 
     // Generate script with AI
-    const script = await generatePodcastScript(allTexts);
+    const script = await generatePodcastScript(allTexts, folder.name);
 
     // Try to generate audio (may fail if TTS not configured)
     let audioUrl = null;
@@ -275,7 +275,7 @@ router.post('/recommend/:folderId', async (req, res) => {
     }
 
     // Generate recommendations with AI
-    const recommendations = await generateResourceRecommendations(allTexts);
+    const recommendations = await generateResourceRecommendations(allTexts, folder.name);
 
     res.json({
       recommendations,
