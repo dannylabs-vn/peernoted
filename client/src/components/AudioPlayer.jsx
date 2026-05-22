@@ -37,8 +37,34 @@ export default function AudioPlayer({ folderId, folderName }) {
     }
   }
 
+  // Draw static "idle" bars so the canvas doesn't look like a broken grey box
+  // before the user presses play.
+  useEffect(() => {
+    if (analyserRef.current) return // live visualizer is running
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const barCount = 32
+    const barWidth = (canvas.width / barCount) * 1.5
+    let x = 0
+    for (let i = 0; i < barCount; i++) {
+      const t = (Math.sin(i * 0.6) + 1) / 2
+      const barHeight = canvas.height * (0.18 + 0.45 * t)
+      const gradient = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight)
+      gradient.addColorStop(0, '#7c3aed')
+      gradient.addColorStop(1, '#a78bfa')
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.roundRect(x, canvas.height - barHeight, barWidth - 2, barHeight, 3)
+      ctx.fill()
+      x += barWidth
+    }
+  }, [audioUrl])
+
   const setupVisualizer = () => {
     if (!audioRef.current || !canvasRef.current) return
+    if (analyserRef.current) return // already set up
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
       const analyser = audioCtx.createAnalyser()
@@ -49,7 +75,7 @@ export default function AudioPlayer({ folderId, folderName }) {
       analyserRef.current = analyser
       drawWaveform()
     } catch (e) {
-      // Visualizer not critical
+      console.warn('Visualizer setup skipped:', e.message)
     }
   }
 
@@ -88,15 +114,21 @@ export default function AudioPlayer({ folderId, folderName }) {
     draw()
   }
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!audioRef.current) return
     if (isPlaying) {
       audioRef.current.pause()
-    } else {
-      audioRef.current.play()
-      if (!analyserRef.current) setupVisualizer()
+      setIsPlaying(false)
+      return
     }
-    setIsPlaying(!isPlaying)
+    try {
+      await audioRef.current.play()
+      setIsPlaying(true)
+      if (!analyserRef.current) setupVisualizer()
+    } catch (e) {
+      console.error('Audio play failed:', e)
+      setError('Trình duyệt không cho phát audio: ' + e.message)
+    }
   }
 
   const handleTimeUpdate = () => {
@@ -184,44 +216,21 @@ export default function AudioPlayer({ folderId, folderName }) {
           <canvas ref={canvasRef} className="waveform-canvas" width="600" height="80"></canvas>
         </div>
 
-        {/* Controls */}
-        <div className="player-controls">
-          <span className="time-label">{formatTime(currentTime)}</span>
-
-          <div className="progress-bar" onClick={handleSeek}>
-            <div
-              className="progress-fill"
-              style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }}
-            ></div>
-          </div>
-
-          <span className="time-label">{formatTime(duration)}</span>
-        </div>
-
-        <div className="player-buttons">
-          <button className="play-btn" onClick={togglePlay}>
-            {isPlaying ? (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" rx="1"/>
-                <rect x="14" y="4" width="4" height="16" rx="1"/>
-              </svg>
-            ) : (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <polygon points="5,3 19,12 5,21"/>
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {audioUrl && (
+        {/* Native HTML5 controls — guaranteed to render the play/pause/seek UI */}
+        {audioUrl ? (
           <audio
             ref={audioRef}
             src={audioUrl}
+            controls
+            preload="metadata"
+            className="native-audio"
+            onPlay={() => { setIsPlaying(true); if (!analyserRef.current) setupVisualizer() }}
+            onPause={() => setIsPlaying(false)}
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={() => setDuration(audioRef.current.duration)}
             onEnded={() => setIsPlaying(false)}
           />
-        )}
+        ) : null}
 
         {!audioUrl && (
           <div className="no-audio-notice">

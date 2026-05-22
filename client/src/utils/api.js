@@ -2,8 +2,26 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: '/api',
-  timeout: 120000 // 2 min for AI processing
+  timeout: 300000 // 5 min for AI + TTS generation
 });
+
+// Attach JWT token from localStorage on every request
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ===== AUTH =====
+export const login = (data) => API.post('/auth/login', data);
+export const register = (data) => API.post('/auth/register', data);
+export const loginWithGoogle = (credential) => API.post('/auth/google', { credential });
+export const getMe = () => API.get('/auth/me');
 
 // ===== FOLDERS =====
 export const getFolders = () => API.get('/folders');
@@ -34,6 +52,7 @@ export const classifyFiles = (files) => {
   });
 };
 
+// Cheat sheet
 export const getCheatSheet = (folderId) => API.get(`/ai/cheatsheet/${folderId}`);
 export const clearCheatSheet = (folderId) => API.delete(`/ai/cheatsheet/${folderId}`);
 export const setCheatSheetTemplate = (folderId, template) =>
@@ -50,6 +69,11 @@ export const analyzeHandwriting = (folderId, file) => {
 export const pickHandwritingFontManual = (folderId, fontFamily) =>
   API.post(`/ai/cheatsheet/${folderId}/handwriting/manual`, { font_family: fontFamily });
 
+// Podcast
 export const generatePodcast = (folderId) => API.post(`/ai/podcast/${folderId}`);
+export const clearPodcast = (folderId) => API.delete(`/ai/podcast/${folderId}`);
+
+// Recommendations
+export const getRecommendations = (folderId) => API.post(`/ai/recommend/${folderId}`);
 
 export default API;

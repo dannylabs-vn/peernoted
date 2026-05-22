@@ -8,7 +8,8 @@ const {
   generateCheatSheet,
   migrateMarkdownToJson,
   generatePodcastScript,
-  analyzeHandwriting
+  analyzeHandwriting,
+  generateResourceRecommendations
 } = require('../services/aiService');
 const { extractText, isImageType, getImageMimeType } = require('../services/extractorService');
 const { uploadToStorage } = require('../services/storageService');
@@ -438,6 +439,43 @@ router.post('/podcast/:folderId', async (req, res) => {
     res.json({ script, audio_url: audioUrl, cached: false });
   } catch (error) {
     console.error('Podcast error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===========================================================================
+// DELETE /api/ai/podcast/:folderId — clear cached podcast (script + audio)
+// ===========================================================================
+router.delete('/podcast/:folderId', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('folders')
+      .update({ podcast_script: [], podcast_audio_url: '' })
+      .eq('id', req.params.folderId);
+    if (error) throw error;
+    res.json({ message: 'Podcast cache cleared' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===========================================================================
+// POST /api/ai/recommend/:folderId — learning resource recommendations
+// ===========================================================================
+router.post('/recommend/:folderId', async (req, res) => {
+  try {
+    const folder = await getFolderOr404(req.params.folderId, res);
+    if (!folder) return;
+
+    const allTexts = await getAllTextsForFolder(folder.id);
+    if (!allTexts || allTexts.trim().length < 20) {
+      return res.status(400).json({ error: 'Không đủ nội dung văn bản để gợi ý tài nguyên' });
+    }
+
+    const items = await generateResourceRecommendations(allTexts);
+    res.json({ items });
+  } catch (error) {
+    console.error('Recommend error:', error);
     res.status(500).json({ error: error.message });
   }
 });

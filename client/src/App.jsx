@@ -3,7 +3,8 @@ import Dropzone from './components/Dropzone'
 import FileList from './components/FileList'
 import CheatSheet from './components/CheatSheet'
 import AudioPlayer from './components/AudioPlayer'
-import { getFolders, classifyFiles, getFiles, updateFolder } from './utils/api'
+import Login from './components/Login'
+import { getFolders, classifyFiles, getFiles, updateFolder, deleteFolder, getMe } from './utils/api'
 import './index.css'
 import './App.css'
 
@@ -33,13 +34,13 @@ function App() {
 
   // Navigation states
   const [showDashboard, setShowDashboard] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
   const [activeTab, setActiveTab] = useState('overview') // 'overview' | 'library' | 'cheatsheets' | 'podcasts' | 'settings'
 
   // Form states for settings
   const [profileName, setProfileName] = useState('Nguyễn An')
   const [profileEmail, setProfileEmail] = useState('an.nguyen@hcmut.edu.vn')
   const [profileSchool, setProfileSchool] = useState('ĐH Bách Khoa TP.HCM')
-  const [profileCohort, setProfileCohort] = useState('K67 (2022-2026)')
   
   // Library filters
   const [libraryFilter, setLibraryFilter] = useState('Tất cả')
@@ -61,6 +62,55 @@ function App() {
   useEffect(() => {
     loadFolders()
   }, [loadFolders])
+
+  // Restore session from localStorage on mount (if user already logged in)
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    const cachedUser = localStorage.getItem('user')
+    if (cachedUser) {
+      try {
+        const u = JSON.parse(cachedUser)
+        if (u?.name) setProfileName(u.name)
+        if (u?.email) setProfileEmail(u.email)
+        if (u?.school) setProfileSchool(u.school)
+      } catch (e) { /* ignore */ }
+    }
+    // Verify token + refresh user data
+    getMe()
+      .then(res => {
+        if (res?.data) {
+          if (res.data.name) setProfileName(res.data.name)
+          if (res.data.email) setProfileEmail(res.data.email)
+          if (res.data.school) setProfileSchool(res.data.school)
+          localStorage.setItem('user', JSON.stringify(res.data))
+        }
+      })
+      .catch(() => {
+        // token expired or invalid — silently clear
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      })
+  }, [])
+
+  const handleDeleteFolder = async (folderId, folderName) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa thư mục "${decodeString(folderName)}" và toàn bộ tài liệu bên trong không? Hành động này không thể hoàn tác.`)) return
+    try {
+      await deleteFolder(folderId)
+      showNotification('Đã xóa thư mục thành công', 'success')
+      loadFolders()
+    } catch (error) {
+      console.error('Error deleting folder:', error)
+      showNotification('Lỗi khi xóa thư mục', 'error')
+    }
+  }
+
+  const getInitials = (name) => {
+    if (!name) return 'U'
+    const parts = name.trim().split(/\s+/)
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+  }
 
   // Load files when folder is selected
   useEffect(() => {
@@ -152,9 +202,9 @@ function App() {
   const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#4b5563', '#a855f7'];
 
   // Navigate directly to folder detail view
-  const openSubjectFolder = (folderObj) => {
+  const openSubjectFolder = (folderObj, defaultView = 'files') => {
     setSelectedFolder(folderObj)
-    setView('files')
+    setView(defaultView)
   }
 
   // Dynamic stats calculated from real database folders
@@ -171,7 +221,20 @@ function App() {
         </div>
       )}
 
-      {!showDashboard ? (
+      {showLogin ? (
+        <Login
+          onLoginSuccess={(user) => {
+            setShowLogin(false)
+            setShowDashboard(true)
+            setActiveTab('overview')
+            setProfileName(user.name)
+            setProfileEmail(user.email)
+            if (user.school) setProfileSchool(user.school)
+            showNotification(`Chào mừng ${user.name}!`, 'success')
+          }}
+          onBack={() => setShowLogin(false)}
+        />
+      ) : !showDashboard ? (
         /* ═══════════════════════════════════════════════════════════════
            LANDING MODE: Modern Business Home Page with macOS Preview
            ═══════════════════════════════════════════════════════════════ */
@@ -193,7 +256,7 @@ function App() {
               <a href="#" className="header-nav-link" onClick={(e) => e.preventDefault()}>Bảng giá</a>
             </nav>
             <div className="header-actions">
-              <button className="btn-login">Đăng nhập</button>
+              <button className="btn-login" onClick={() => setShowLogin(true)}>Đăng nhập</button>
               <button className="btn btn-primary btn-landing-workspace" onClick={() => { setShowDashboard(true); setActiveTab('overview'); }}>
                 Mở workspace
               </button>
@@ -475,10 +538,10 @@ function App() {
             {/* Bottom Profile and Storage indicator */}
             <div className="db-sidebar-footer">
               <div className="db-profile-card">
-                <div className="db-profile-avatar">NA</div>
+                <div className="db-profile-avatar">{getInitials(profileName)}</div>
                 <div className="db-profile-info">
                   <div className="db-profile-name">{profileName}</div>
-                  <div className="db-profile-school">ĐH Bách Khoa · K67</div>
+                  <div className="db-profile-school">{profileSchool || ''}</div>
                 </div>
               </div>
               
@@ -723,6 +786,16 @@ function App() {
                                     className="quick-folder-card"
                                     onClick={() => openSubjectFolder(folder)}
                                   >
+                                    <button
+                                      className="btn-delete-folder"
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder._id, folder.name) }}
+                                      title="Xóa thư mục"
+                                      style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+                                      </svg>
+                                    </button>
                                     <div className="q-card-header">
                                       <div className="q-folder-icon" style={{ background: color }}></div>
                                       <span className="q-file-count">{folder.fileCount || 0} files</span>
@@ -945,12 +1018,24 @@ function App() {
                                     </td>
                                     <td className="lib-date-col">{new Date(folder.updatedAt).toLocaleDateString('vi-VN')}</td>
                                     <td>
-                                      <button 
-                                        className="btn-open-folder-link"
-                                        onClick={() => openSubjectFolder(folder)}
-                                      >
-                                        Mở →
-                                      </button>
+                                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <button
+                                          className="btn-open-folder-link"
+                                          onClick={() => openSubjectFolder(folder)}
+                                        >
+                                          Mở →
+                                        </button>
+                                        <button
+                                          className="btn-delete-icon"
+                                          title="Xóa thư mục"
+                                          onClick={() => handleDeleteFolder(folder._id, folder.name)}
+                                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                        >
+                                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+                                          </svg>
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
                                 );
@@ -1063,10 +1148,10 @@ function App() {
                             const hasPodcast = !!folder.podcast_audio_url;
                             const color = colors[index % colors.length];
                             return (
-                              <div 
-                                className="podcast-row-item" 
-                                key={folder._id} 
-                                onClick={() => openSubjectFolder(folder)}
+                              <div
+                                className="podcast-row-item"
+                                key={folder._id}
+                                onClick={() => openSubjectFolder(folder, 'podcast')}
                               >
                                 <div className="p-row-left">
                                   <div 
@@ -1115,7 +1200,7 @@ function App() {
                         </div>
                         
                         <div className="s-avatar-row">
-                          <div className="s-avatar-circle">NA</div>
+                          <div className="s-avatar-circle">{getInitials(profileName)}</div>
                           <button className="btn btn-secondary btn-sm" onClick={() => showNotification('Feature coming soon!', 'info')}>
                             Thay đổi ảnh
                           </button>
@@ -1141,23 +1226,41 @@ function App() {
                             />
                           </div>
                           <div className="form-group">
-                            <label>TRƯỜNG</label>
-                            <input 
-                              type="text" 
-                              value={profileSchool} 
-                              onChange={(e) => setProfileSchool(e.target.value)} 
-                              placeholder="Trường Đại học..."
+                            <label>ĐẠI HỌC / TRƯỜNG</label>
+                            <input
+                              type="text"
+                              list="school-options"
+                              value={profileSchool}
+                              onChange={(e) => setProfileSchool(e.target.value)}
+                              placeholder="Chọn hoặc nhập trường..."
                             />
+                            <datalist id="school-options">
+                              <option value="ĐH Bách Khoa TP.HCM" />
+                              <option value="ĐH Khoa học Tự nhiên TP.HCM" />
+                              <option value="ĐH Công nghệ Thông tin TP.HCM" />
+                              <option value="ĐH Khoa học Xã hội và Nhân văn TP.HCM" />
+                              <option value="ĐH Kinh tế TP.HCM (UEH)" />
+                              <option value="ĐH RMIT" />
+                              <option value="ĐH Ngoại thương" />
+                              <option value="ĐH FPT" />
+                            </datalist>
                           </div>
-                          <div className="form-group">
-                            <label>NIÊN KHÓA</label>
-                            <input 
-                              type="text" 
-                              value={profileCohort} 
-                              onChange={(e) => setProfileCohort(e.target.value)} 
-                              placeholder="Khóa học..."
-                            />
-                          </div>
+                        </div>
+
+                        <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            className="btn btn-secondary"
+                            style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)' }}
+                            onClick={() => {
+                              localStorage.removeItem('token')
+                              localStorage.removeItem('user')
+                              setShowDashboard(false)
+                              setActiveTab('overview')
+                              showNotification('Đã đăng xuất thành công', 'success')
+                            }}
+                          >
+                            Đăng xuất
+                          </button>
                         </div>
                       </div>
 

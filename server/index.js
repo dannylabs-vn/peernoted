@@ -4,6 +4,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { healthcheck } = require('./config/supabase');
+const authRoutes = require('./routes/auth');
 const folderRoutes = require('./routes/folders');
 const fileRoutes = require('./routes/files');
 const aiRoutes = require('./routes/ai');
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Serve uploaded files (local fallback storage)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
+app.use('/api/auth', authRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/ai', aiRoutes);

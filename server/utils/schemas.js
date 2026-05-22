@@ -107,9 +107,39 @@ const HANDWRITING_SCHEMA = {
   }
 };
 
+const RECOMMENDATIONS_SCHEMA = {
+  name: 'recommendations',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['items'],
+    properties: {
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['title', 'type', 'language', 'search_query', 'description', 'topic_match', 'source_hint'],
+          properties: {
+            title: { type: 'string' },
+            type: { type: 'string', enum: ['video', 'podcast', 'article'] },
+            language: { type: 'string', enum: ['vi', 'en'] },
+            search_query: { type: 'string' },
+            description: { type: 'string' },
+            topic_match: { type: 'string' },
+            source_hint: { type: 'string' }
+          }
+        }
+      }
+    }
+  }
+};
+
 module.exports = {
   CHEAT_SHEET_SCHEMA,
   CLASSIFY_SCHEMA,
   PODCAST_SCRIPT_SCHEMA,
-  HANDWRITING_SCHEMA
+  HANDWRITING_SCHEMA,
+  RECOMMENDATIONS_SCHEMA
 };
