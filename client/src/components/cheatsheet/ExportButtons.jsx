@@ -62,65 +62,25 @@ export default function ExportButtons({ targetRef, fileName }) {
     setBusy('pdf')
     try {
       await waitForFontsAndImages(node)
-      // Capture per-section so a long sheet becomes multi-page instead of 1 giant page
-      const sections = node.querySelectorAll('section')
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const margin = 10
+      // Capture the whole renderer in one go (same as PNG export), then make a
+      // PDF whose single page matches the captured aspect ratio — looks like a
+      // poster, not a chopped multi-page doc.
+      const canvas = await captureNode(node, 2)
+      const imgData = canvas.toDataURL('image/png')
 
-      if (sections.length === 0) {
-        const canvas = await captureNode(node, 2)
-        const imgData = canvas.toDataURL('image/png')
-        const imgWidth = pageWidth - margin * 2
-        const imgHeight = (canvas.height / canvas.width) * imgWidth
-        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight)
-      } else {
-        // Title (capture the header separately if present)
-        const header = node.querySelector('header')
-        let first = true
-        if (header) {
-          const hCanvas = await captureNode(header, 2)
-          const imgData = hCanvas.toDataURL('image/png')
-          const imgWidth = pageWidth - margin * 2
-          const imgHeight = (hCanvas.height / hCanvas.width) * imgWidth
-          pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight)
-          first = false
-        }
-        for (let i = 0; i < sections.length; i++) {
-          const canvas = await captureNode(sections[i], 2)
-          const imgData = canvas.toDataURL('image/png')
-          const imgWidth = pageWidth - margin * 2
-          const imgHeight = (canvas.height / canvas.width) * imgWidth
-          if (!first) pdf.addPage()
-          first = false
-          let y = margin
-          let remaining = imgHeight
-          // If section taller than 1 page, slice it
-          if (imgHeight <= pageHeight - margin * 2) {
-            pdf.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight)
-          } else {
-            const slicePx = Math.floor(canvas.width * (pageHeight - margin * 2) / imgWidth)
-            let offsetY = 0
-            const sliceCanvas = document.createElement('canvas')
-            sliceCanvas.width = canvas.width
-            sliceCanvas.height = slicePx
-            const ctx = sliceCanvas.getContext('2d')
-            while (offsetY < canvas.height) {
-              const h = Math.min(slicePx, canvas.height - offsetY)
-              sliceCanvas.height = h
-              ctx.clearRect(0, 0, sliceCanvas.width, h)
-              ctx.drawImage(canvas, 0, offsetY, canvas.width, h, 0, 0, canvas.width, h)
-              const sliceData = sliceCanvas.toDataURL('image/png')
-              const sliceImgHeight = (h / canvas.width) * imgWidth
-              if (offsetY > 0) pdf.addPage()
-              pdf.addImage(sliceData, 'PNG', margin, margin, imgWidth, sliceImgHeight)
-              offsetY += h
-            }
-          }
-        }
-      }
+      // Map captured pixel dimensions to PDF mm at ~96 DPI (1px = 0.264583mm).
+      // Divide by the html2canvas scale (2x) so the final mm size matches the
+      // on-screen layout instead of being 2× too large.
+      const PX_TO_MM = 0.264583 / 2
+      const pageW = canvas.width * PX_TO_MM
+      const pageH = canvas.height * PX_TO_MM
 
+      const pdf = new jsPDF({
+        orientation: pageW >= pageH ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: [pageW, pageH]
+      })
+      pdf.addImage(imgData, 'PNG', 0, 0, pageW, pageH)
       pdf.save(`${safeFilename(fileName)}.pdf`)
     } finally {
       setBusy(null)
