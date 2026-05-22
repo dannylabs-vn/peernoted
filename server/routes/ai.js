@@ -39,6 +39,23 @@ async function getFolderOr404(id, res) {
   return data;
 }
 
+// Detect text that's just page markers (image-based PDFs extracted via pdf-parse
+// often produce nothing but "-- N of M --" lines). Returns false if the text
+// looks like extraction garbage.
+function isMeaningfulText(text) {
+  if (!text) return false;
+  // Strip common page-marker patterns and whitespace
+  const stripped = text
+    .replace(/--\s*\d+\s*of\s*\d+\s*--/gi, '')
+    .replace(/page\s*\d+(\s*of\s*\d+)?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (stripped.length < 30) return false;
+  // Require at least a few "real" words (3+ letters) — pages of "1 2 3 ..." wouldn't pass
+  const wordHits = stripped.match(/[A-Za-zÀ-ỹ]{3,}/g) || [];
+  return wordHits.length >= 5;
+}
+
 async function getAllTextsForFolder(folderId) {
   const { data, error } = await supabase
     .from('files')
@@ -85,14 +102,18 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
         classification = await classifyFromImage(file.buffer, getImageMimeType(ext), foldersWithTags);
       } else {
         const text = await extractText(file.buffer, ext);
-        if (!text || text.trim().length < 10) {
+        const meaningfulText = isMeaningfulText(text);
+        if (!text || text.trim().length < 10 || !meaningfulText) {
+          // Either no text extracted at all, or only page markers (image-based PDF
+          // / scan). Without real content, AI would hallucinate based on existing
+          // folder names — refuse instead.
           classification = {
             subject: 'Chưa phân loại',
             chapter: '',
             grade: '',
             folder_name: 'Chưa phân loại',
-            summary: `File ${originalNameUtf8} không thể trích xuất nội dung`,
-            tags: []
+            summary: `File ${originalNameUtf8} không trích xuất được text (có thể PDF dạng ảnh scan). Cần OCR hoặc upload từng trang dưới dạng ảnh.`,
+            tags: ['cần-OCR']
           };
         } else {
           classification = await classifyFromText(text, foldersWithTags);
