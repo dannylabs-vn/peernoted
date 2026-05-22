@@ -5,6 +5,21 @@
 
 create extension if not exists "pgcrypto";
 
+-- ---------- users ----------
+create table if not exists public.users (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null unique,
+  password_hash text,
+  school text not null default '',
+  cohort text not null default '',
+  avatar_url text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists users_email_idx on public.users (email);
+
 -- ---------- folders ----------
 create table if not exists public.folders (
   id uuid primary key default gen_random_uuid(),
@@ -52,6 +67,11 @@ begin
   return new;
 end $$;
 
+drop trigger if exists users_touch on public.users;
+create trigger users_touch
+  before update on public.users
+  for each row execute function public.touch_updated_at();
+
 drop trigger if exists folders_touch on public.folders;
 create trigger folders_touch
   before update on public.folders
@@ -66,5 +86,6 @@ create trigger files_touch
 -- Single-user app for now: keep RLS DISABLED so the anon key from the server
 -- can read/write directly. If multi-user is added later, enable RLS and add
 -- policies keyed off auth.uid().
+alter table public.users   disable row level security;
 alter table public.folders disable row level security;
 alter table public.files   disable row level security;
