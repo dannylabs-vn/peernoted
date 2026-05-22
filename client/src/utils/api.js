@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// In dev: '/api' goes through Vite proxy → localhost:5000.
+// In prod: set VITE_API_URL to the deployed backend (e.g. https://peernoted-api.onrender.com/api).
+const baseURL = import.meta.env.VITE_API_URL || '/api';
+
 const API = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 300000 // 5 min for AI + TTS generation
 });
 

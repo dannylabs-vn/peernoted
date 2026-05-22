@@ -1,0 +1,33 @@
+name: Keep Render server awake
+
+on:
+  schedule:
+    # Render free tier sleeps after 15 min idle. Ping every 10 min keeps it warm.
+    # GitHub Actions cron có thể delay vài phút khi load cao, nhưng 10 min vẫn an toàn.
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # trigger thủ công để test
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend /api/health
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "BACKEND_URL secret not set — skip"
+            exit 0
+          fi
+          echo "Pinging $BACKEND_URL/api/health ..."
+          for i in 1 2 3; do
+            CODE=$(curl -fsS -o /tmp/out -w "%{http_code}" --max-time 30 "$BACKEND_URL/api/health" || true)
+            echo "Attempt $i: HTTP $CODE"
+            if [ "$CODE" = "200" ]; then
+              cat /tmp/out
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Failed to wake server after 3 attempts"
+          exit 1
