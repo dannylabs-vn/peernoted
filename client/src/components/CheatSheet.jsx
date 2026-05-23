@@ -37,8 +37,24 @@ export default function CheatSheet({ folderId, folderName }) {
     setError(null)
     try {
       const res = await getCheatSheet(folderId)
-      setJson(res.data.json || null)
-      setMarkdown(res.data.markdown || '')
+      // NFC normalize ngay tại response để fix Vietnamese diacritics dạng decomposed
+      // (OpenAI đôi khi trả "Cáp" thay vì "Cấp")
+      const nfc = (s) => typeof s === 'string' ? s.normalize('NFC') : s
+      const normalizeJson = (j) => j ? {
+        title: nfc(j.title),
+        sections: (j.sections || []).map(s => ({
+          heading: nfc(s.heading),
+          blocks: (s.blocks || []).map(b => ({
+            ...b,
+            content: nfc(b.content),
+            term: nfc(b.term),
+            caption: nfc(b.caption),
+            items: Array.isArray(b.items) ? b.items.map(nfc) : b.items
+          }))
+        }))
+      } : null
+      setJson(normalizeJson(res.data.json))
+      setMarkdown(nfc(res.data.markdown || ''))
       setTemplate(res.data.template || 'academic-blue')
       setFont(res.data.font || '')
       setCached(!!res.data.cached)
