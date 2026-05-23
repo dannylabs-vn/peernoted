@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { generatePodcast } from '../utils/api'
+import { generatePodcast, clearPodcast } from '../utils/api'
 import './AudioPlayer.css'
 
 export default function AudioPlayer({ folderId, folderName }) {
@@ -12,16 +12,6 @@ export default function AudioPlayer({ folderId, folderName }) {
   const [duration, setDuration] = useState(0)
   const [activeLine, setActiveLine] = useState(0)
   const audioRef = useRef(null)
-  const canvasRef = useRef(null)
-  const animFrameRef = useRef(null)
-  const analyserRef = useRef(null)
-
-  useEffect(() => {
-    loadPodcast()
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
-    }
-  }, [folderId])
 
   const loadPodcast = async () => {
     setLoading(true)
@@ -37,104 +27,42 @@ export default function AudioPlayer({ folderId, folderName }) {
     }
   }
 
-  // Draw static "idle" bars so the canvas doesn't look like a broken grey box
-  // before the user presses play.
   useEffect(() => {
-    if (analyserRef.current) return // live visualizer is running
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    const barCount = 32
-    const barWidth = (canvas.width / barCount) * 1.5
-    let x = 0
-    for (let i = 0; i < barCount; i++) {
-      const t = (Math.sin(i * 0.6) + 1) / 2
-      const barHeight = canvas.height * (0.18 + 0.45 * t)
-      const gradient = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight)
-      gradient.addColorStop(0, '#7c3aed')
-      gradient.addColorStop(1, '#a78bfa')
-      ctx.fillStyle = gradient
-      ctx.beginPath()
-      ctx.roundRect(x, canvas.height - barHeight, barWidth - 2, barHeight, 3)
-      ctx.fill()
-      x += barWidth
-    }
-  }, [audioUrl])
+    loadPodcast()
+  }, [folderId])
 
-  const setupVisualizer = () => {
-    if (!audioRef.current || !canvasRef.current) return
-    if (analyserRef.current) return // already set up
+  const regeneratePodcast = async () => {
+    setLoading(true)
+    setError(null)
+    setScript([])
+    setAudioUrl(null)
+    setIsPlaying(false)
+    if (audioRef.current) audioRef.current.pause()
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
-      const analyser = audioCtx.createAnalyser()
-      const source = audioCtx.createMediaElementSource(audioRef.current)
-      source.connect(analyser)
-      analyser.connect(audioCtx.destination)
-      analyser.fftSize = 64
-      analyserRef.current = analyser
-      drawWaveform()
-    } catch (e) {
-      console.warn('Visualizer setup skipped:', e.message)
+      await clearPodcast(folderId)
+      const res = await generatePodcast(folderId)
+      setScript(res.data.script || [])
+      setAudioUrl(res.data.audio_url)
+    } catch (err) {
+      setError(err.response?.data?.error || err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const drawWaveform = () => {
-    const canvas = canvasRef.current
-    if (!canvas || !analyserRef.current) return
-    const ctx = canvas.getContext('2d')
-    const analyser = analyserRef.current
-    const bufferLength = analyser.frequencyBinCount
-    const dataArray = new Uint8Array(bufferLength)
-
-    const draw = () => {
-      animFrameRef.current = requestAnimationFrame(draw)
-      analyser.getByteFrequencyData(dataArray)
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      const barWidth = (canvas.width / bufferLength) * 1.5
-      let x = 0
-
-      for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height * 0.8
-
-        const gradient = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight)
-        gradient.addColorStop(0, '#7c3aed')
-        gradient.addColorStop(1, '#a78bfa')
-
-        ctx.fillStyle = gradient
-        ctx.beginPath()
-        ctx.roundRect(x, canvas.height - barHeight, barWidth - 2, barHeight, 3)
-        ctx.fill()
-
-        x += barWidth
-      }
-    }
-    draw()
-  }
-
-  const togglePlay = async () => {
+  const togglePlay = () => {
     if (!audioRef.current) return
     if (isPlaying) {
       audioRef.current.pause()
-      setIsPlaying(false)
-      return
+    } else {
+      audioRef.current.play()
     }
-    try {
-      await audioRef.current.play()
-      setIsPlaying(true)
-      if (!analyserRef.current) setupVisualizer()
-    } catch (e) {
-      console.error('Audio play failed:', e)
-      setError('Trình duyệt không cho phát audio: ' + e.message)
-    }
+    setIsPlaying(!isPlaying)
   }
 
   const handleTimeUpdate = () => {
     if (!audioRef.current) return
     setCurrentTime(audioRef.current.currentTime)
-    // Estimate active script line
     if (duration > 0 && script.length > 0) {
       const progress = audioRef.current.currentTime / duration
       const line = Math.floor(progress * script.length)
@@ -146,61 +74,64 @@ export default function AudioPlayer({ folderId, folderName }) {
     if (!audioRef.current) return
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
-    const pct = x / rect.width
+    const pct = Math.max(0, Math.min(1, x / rect.width))
     audioRef.current.currentTime = pct * duration
   }
 
   const formatTime = (s) => {
+    if (!s || isNaN(s)) return '0:00'
     const m = Math.floor(s / 60)
     const sec = Math.floor(s % 60)
     return `${m}:${sec.toString().padStart(2, '0')}`
   }
 
+  // ── Loading State ──
   if (loading) {
     return (
-      <div className="podcast-loading fade-in">
+      <div className="podcast-loading">
         <div className="loading-card">
           <div className="loading-spinner">
             <div className="spinner-ring"></div>
             <div className="spinner-icon">🎙️</div>
           </div>
           <h3>Đang tạo Podcast...</h3>
-          <p>AI đang viết kịch bản và tổng hợp giọng nói</p>
+          <p className="shimmer-text">AI đang viết kịch bản và tổng hợp giọng nói</p>
         </div>
       </div>
     )
   }
 
+  // ── Error State ──
   if (error) {
     return (
-      <div className="podcast-error fade-in">
+      <div className="podcast-error">
         <div className="error-card glass">
           <span className="error-icon">⚠️</span>
           <h3>Lỗi tạo Podcast</h3>
           <p>{error}</p>
-          <button className="btn btn-primary" onClick={loadPodcast}>Thử lại</button>
+          <button className="btn btn-primary" onClick={loadPodcast}>
+            Thử lại
+          </button>
         </div>
       </div>
     )
   }
 
+  // ── Main Player ──
   return (
-    <div className="podcast fade-in">
+    <div className="podcast">
       {/* Audio Player Card */}
-      <div className="player-card glass">
+      <div className="player-card">
         <div className="player-top">
-          {/* Vinyl Disc */}
-          <div className={`vinyl-container ${isPlaying ? 'playing' : ''}`}>
-            <div className="vinyl-disc">
-              <div className="vinyl-grooves">
-                <div className="vinyl-groove"></div>
-                <div className="vinyl-groove"></div>
-                <div className="vinyl-groove"></div>
-              </div>
-              <div className="vinyl-label">
-                <span>🎙️</span>
-              </div>
-            </div>
+          {/* Equalizer Visualizer */}
+          <div className={`eq-visualizer ${isPlaying ? 'playing' : ''}`}>
+            <div className="eq-bar"></div>
+            <div className="eq-bar"></div>
+            <div className="eq-bar"></div>
+            <div className="eq-bar"></div>
+            <div className="eq-bar"></div>
+            <div className="eq-bar"></div>
+            <div className="eq-bar"></div>
           </div>
 
           {/* Player Info */}
@@ -211,56 +142,85 @@ export default function AudioPlayer({ folderId, folderName }) {
           </div>
         </div>
 
-        {/* Waveform Visualizer */}
-        <div className="waveform-container">
-          <canvas ref={canvasRef} className="waveform-canvas" width="600" height="80"></canvas>
+        {/* Progress Bar */}
+        <div className="player-controls">
+          <span className="time-label">{formatTime(currentTime)}</span>
+          <div className="progress-bar" onClick={handleSeek}>
+            <div
+              className="progress-fill"
+              style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }}
+            ></div>
+          </div>
+          <span className="time-label">{formatTime(duration)}</span>
         </div>
 
-        {/* Native HTML5 controls — guaranteed to render the play/pause/seek UI */}
-        {audioUrl ? (
+        {/* Buttons */}
+        <div className="player-buttons">
+          <button className="play-btn" onClick={togglePlay} aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}>
+            {isPlaying ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" rx="1.5" />
+                <rect x="14" y="4" width="4" height="16" rx="1.5" />
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6.5 3.5C6.5 3.1 6.8 2.9 7.1 3.1L20.3 11.3C20.6 11.5 20.6 12 20.3 12.2L7.1 20.4C6.8 20.6 6.5 20.4 6.5 20V3.5Z" />
+              </svg>
+            )}
+          </button>
+
+          <button className="regen-btn" onClick={regeneratePodcast} title="Tạo lại podcast">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+            <span>Tạo lại</span>
+          </button>
+        </div>
+
+        {/* Hidden audio element */}
+        {audioUrl && (
           <audio
             ref={audioRef}
             src={audioUrl}
-            controls
-            preload="metadata"
-            className="native-audio"
-            onPlay={() => { setIsPlaying(true); if (!analyserRef.current) setupVisualizer() }}
-            onPause={() => setIsPlaying(false)}
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={() => setDuration(audioRef.current.duration)}
             onEnded={() => setIsPlaying(false)}
           />
-        ) : null}
+        )}
 
+        {/* No audio fallback */}
         {!audioUrl && (
           <div className="no-audio-notice">
-            <p>🔇 Âm thanh chưa khả dụng (cần cài TTS). Xem kịch bản bên dưới.</p>
+            <p>🔇 Âm thanh chưa khả dụng. Xem kịch bản bên dưới.</p>
           </div>
         )}
       </div>
 
       {/* Script Transcript */}
-      <div className="script-container glass">
-        <h3 className="script-title">📜 Kịch bản Podcast</h3>
-        <div className="script-lines">
-          {script.map((line, idx) => (
-            <div
-              key={idx}
-              className={`script-line ${line.speaker === 'MC_A' ? 'speaker-a' : 'speaker-b'} ${idx === activeLine ? 'active' : ''}`}
-            >
-              <div className="speaker-avatar">
-                {line.speaker === 'MC_A' ? '👨‍🎓' : '👩‍🏫'}
+      {script.length > 0 && (
+        <div className="script-container">
+          <h3 className="script-title">📜 Kịch bản Podcast</h3>
+          <div className="script-lines">
+            {script.map((line, idx) => (
+              <div
+                key={idx}
+                className={`script-line ${line.speaker === 'MC_A' ? 'speaker-a' : 'speaker-b'} ${idx === activeLine ? 'active' : ''}`}
+              >
+                <div className="speaker-avatar">
+                  {line.speaker === 'MC_A' ? '👨‍🎓' : '👩‍🏫'}
+                </div>
+                <div className="speech-bubble">
+                  <span className="speaker-name">
+                    {line.speaker === 'MC_A' ? 'Minh (Hỏi)' : 'Lan (Giải thích)'}
+                  </span>
+                  <p>{line.text}</p>
+                </div>
               </div>
-              <div className="speech-bubble">
-                <span className="speaker-name">
-                  {line.speaker === 'MC_A' ? 'Minh (Hỏi)' : 'Lan (Giải thích)'}
-                </span>
-                <p>{line.text}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
