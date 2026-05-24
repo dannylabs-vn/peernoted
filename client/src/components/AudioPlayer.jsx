@@ -186,13 +186,20 @@ export default function AudioPlayer({ folderId, folderName }) {
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={() => setDuration(audioRef.current.duration)}
             onEnded={() => setIsPlaying(false)}
+            onError={() => {
+              // File 404 (Render ephemeral disk) hoặc MP3 hỏng → clear URL + báo user
+              console.warn('Audio failed to load, clearing URL')
+              setAudioUrl(null)
+              setIsPlaying(false)
+              setError('File audio không còn khả dụng trên server (Render free tier xóa file khi sleep). Bấm "Tạo lại" để generate podcast mới.')
+            }}
           />
         )}
 
         {/* No audio fallback */}
         {!audioUrl && (
           <div className="no-audio-notice">
-            <p>🔇 Âm thanh chưa khả dụng. Xem kịch bản bên dưới.</p>
+            <p>🔇 Âm thanh chưa khả dụng. Xem kịch bản bên dưới hoặc bấm <strong>Tạo lại</strong> để generate.</p>
           </div>
         )}
       </div>

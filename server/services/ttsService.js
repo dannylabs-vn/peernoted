@@ -59,6 +59,36 @@ async function generateChunk(text, voice, outputPath = null, retries = 3) {
  * @param {'vi'|'en'} language
  * @returns {Promise<string|null>} URL path to /uploads/audio/...
  */
+// Upload buffer to Supabase Storage, fall back to local disk if Supabase fails.
+// Returns a stable URL that works across Render restarts.
+async function uploadAudioBuffer(buffer, filename) {
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const baseUrl = process.env.SUPABASE_URL
+        .replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+      const supabase = createClient(baseUrl, process.env.SUPABASE_ANON_KEY, {
+        auth: { persistSession: false }
+      });
+      const bucket = process.env.SUPABASE_BUCKET || 'peernoted-files';
+      const objectPath = `audio/${filename}`;
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(objectPath, buffer, { contentType: 'audio/mpeg', upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+      console.log(`[TTS] Uploaded to Supabase: ${data.publicUrl}`);
+      return data.publicUrl;
+    } catch (e) {
+      console.warn('[TTS] Supabase upload failed, falling back to local:', e.message);
+    }
+  }
+  // Local fallback (dev only — Render free tier sẽ mất file khi sleep)
+  const outputPath = path.join(AUDIO_DIR, filename);
+  fs.writeFileSync(outputPath, buffer);
+  return `/uploads/audio/${filename}`;
+}
+
 async function generatePodcastAudio(script, language = 'vi') {
   if (!script || script.length === 0) {
     console.log('[TTS] Empty script, skipping');
@@ -67,7 +97,6 @@ async function generatePodcastAudio(script, language = 'vi') {
 
   const voices = language === 'en' ? VOICES_EN : VOICES;
   const outputFileName = `podcast_${uuidv4()}.mp3`;
-  const outputPath = path.join(AUDIO_DIR, outputFileName);
 
   console.log(`[TTS] Generating ${script.length} lines...`);
   const buffers = [];
@@ -84,9 +113,8 @@ async function generatePodcastAudio(script, language = 'vi') {
     if (buffers.length === 0) throw new Error('No audio buffers generated');
 
     const finalBuffer = Buffer.concat(buffers);
-    fs.writeFileSync(outputPath, finalBuffer);
-    console.log(`[TTS] Saved: ${outputPath} (${(finalBuffer.length / 1024).toFixed(1)} KB)`);
-    return `/uploads/audio/${outputFileName}`;
+    console.log(`[TTS] Total ${(finalBuffer.length / 1024).toFixed(1)} KB`);
+    return await uploadAudioBuffer(finalBuffer, outputFileName);
   } catch (error) {
     console.error('[TTS] Podcast generation failed:', error.message);
     return null;
