@@ -242,8 +242,8 @@ function App() {
           {/* Header Navigation */}
           <header className="landing-header">
             <div className="header-logo" onClick={() => setShowDashboard(false)}>
-              <div className="header-logo-icon" style={{ background: 'transparent', padding: 0, display: 'flex' }}>
-                <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }} />
+              <div className="header-logo-icon">
+                <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
               </div>
               <span>PeerNoted</span>
             </div>
@@ -423,8 +423,8 @@ function App() {
               <div className="footer-main">
                 <div className="footer-brand">
                   <div className="footer-logo" onClick={() => setShowDashboard(false)}>
-                    <div className="footer-logo-icon" style={{ background: 'transparent', padding: 0, display: 'flex' }}>
-                      <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }} />
+                    <div className="footer-logo-icon">
+                      <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
                     </div>
                     <span>PeerNoted</span>
                   </div>
@@ -483,8 +483,8 @@ function App() {
             {/* Top Brand Logo */}
             <div className="db-logo-wrapper" onClick={() => setShowDashboard(false)} title="Quay lại trang chủ">
               <div className="db-logo">
-                <div className="db-logo-icon" style={{ background: 'transparent', padding: 0, display: 'flex' }}>
-                  <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }} />
+                <div className="db-logo-icon">
+                  <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
                 </div>
                 <span>PeerNoted</span>
               </div>
