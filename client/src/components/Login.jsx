@@ -83,7 +83,7 @@ export default function Login({ onLoginSuccess, onBack }) {
         <div className="login-brand">
           <div className="brand-content">
             <div className="brand-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', background: 'transparent', padding: '0', borderRadius: '8px' }} />
+              <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', background: '#fff', padding: '4px', borderRadius: '8px' }} />
               PeerNoted
             </div>
             <h1>Học tập thông minh hơn với AI</h1>

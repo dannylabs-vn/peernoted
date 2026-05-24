@@ -243,7 +243,7 @@ function App() {
           <header className="landing-header">
             <div className="header-logo" onClick={() => setShowDashboard(false)}>
               <div className="header-logo-icon">
-                <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+                <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 0 }} />
               </div>
               <span>PeerNoted</span>
             </div>
@@ -424,7 +424,7 @@ function App() {
                 <div className="footer-brand">
                   <div className="footer-logo" onClick={() => setShowDashboard(false)}>
                     <div className="footer-logo-icon">
-                      <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+                      <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 0 }} />
                     </div>
                     <span>PeerNoted</span>
                   </div>
@@ -484,7 +484,7 @@ function App() {
             <div className="db-logo-wrapper" onClick={() => setShowDashboard(false)} title="Quay lại trang chủ">
               <div className="db-logo">
                 <div className="db-logo-icon">
-                  <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+                  <img src="/logo.png" alt="PeerNoted Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 0 }} />
                 </div>
                 <span>PeerNoted</span>
               </div>
