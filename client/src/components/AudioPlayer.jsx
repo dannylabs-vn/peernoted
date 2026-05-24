@@ -109,9 +109,14 @@ export default function AudioPlayer({ folderId, folderName }) {
           <span className="error-icon">⚠️</span>
           <h3>Lỗi tạo Podcast</h3>
           <p>{error}</p>
-          <button className="btn btn-primary" onClick={loadPodcast}>
-            Thử lại
-          </button>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '12px' }}>
+            <button className="btn btn-primary" onClick={regeneratePodcast}>
+              🔄 Tạo lại podcast
+            </button>
+            <button className="btn btn-secondary" onClick={loadPodcast}>
+              Thử lại
+            </button>
+          </div>
         </div>
       </div>
     )
