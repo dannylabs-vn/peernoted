@@ -8,17 +8,20 @@ let VISION_MODEL = 'gpt-4o';
 
 function getClient() {
   if (!_client) {
-    if (process.env.GEMINI_API_KEY) {
+    // Ưu tiên OpenAI vì hỗ trợ Structured Outputs strict mode (Gemini KHÔNG hỗ trợ
+    // đầy đủ → schema phức tạp sẽ fail → fallback về heuristicClassify keyword cứng).
+    // Gemini chỉ dùng làm fallback khi không có OpenAI key.
+    if (process.env.OPENAI_API_KEY) {
+      _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      TEXT_MODEL = 'gpt-4o-mini';
+      VISION_MODEL = 'gpt-4o';
+    } else if (process.env.GEMINI_API_KEY) {
       _client = new OpenAI({
         apiKey: process.env.GEMINI_API_KEY,
         baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/'
       });
       TEXT_MODEL = 'gemini-1.5-flash';
       VISION_MODEL = 'gemini-1.5-flash';
-    } else if (process.env.OPENAI_API_KEY) {
-      _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      TEXT_MODEL = 'gpt-4o-mini';
-      VISION_MODEL = 'gpt-4o';
     } else {
       throw new Error('OPENAI_API_KEY hoặc GEMINI_API_KEY chưa được điền trong .env');
     }
