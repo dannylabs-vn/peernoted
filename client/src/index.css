@@ -504,12 +504,13 @@ p {
 /* ── Trust Partners Section ── */
 .trust-section {
   width: 100%;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  padding: 60px 24px;
-  margin: 80px 0;
-  background: rgba(0, 0, 0, 0.01);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 80px 24px;
+  margin: 60px 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 80%);
   text-align: center;
+  position: relative;
 }
 
 .trust-wrapper {
@@ -518,33 +519,85 @@ p {
 }
 
 .trust-title {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 800;
   color: var(--text-muted);
-  letter-spacing: 0.2em;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
-  margin-bottom: 32px;
+  margin-bottom: 48px;
+  opacity: 0.8;
 }
 
-.trust-grid {
+.trust-slider-container {
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  padding: 12px 0;
+  display: flex;
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  margin-bottom: 16px;
+}
+
+.trust-slider-container:last-child {
+  margin-bottom: 0;
+}
+
+.trust-marquee {
+  display: flex;
+  width: max-content;
+  gap: 80px;
+  align-items: center;
+}
+
+.trust-marquee-row-1 {
+  animation: marquee-forward 32s linear infinite;
+}
+
+.trust-marquee-row-2 {
+  animation: marquee-backward 38s linear infinite;
+}
+
+.trust-marquee-row-3 {
+  animation: marquee-forward 35s linear infinite;
+}
+
+.trust-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-forward {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-backward {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.trust-logo-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 60px;
-  flex-wrap: wrap;
+  padding: 8px 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.trust-logo {
-  font-size: 1.15rem;
-  font-weight: 800;
-  font-style: italic;
-  color: #94a3b8;
-  letter-spacing: -0.03em;
-  transition: color 0.2s;
+.trust-logo-svg {
+  height: 46px;
+  width: auto;
+  min-width: 46px;
+  max-width: 130px;
+  opacity: 0.45;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: grayscale(100%) brightness(0.9);
 }
 
-.trust-logo:hover {
-  color: #64748b;
+.trust-logo-svg:hover {
+  opacity: 1;
+  transform: scale(1.12);
+  filter: grayscale(0%) brightness(1.1);
 }
 
 /* ── CTA Block ── */

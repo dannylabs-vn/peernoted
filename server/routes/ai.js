@@ -99,7 +99,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
 
       let classification;
       if (isImageType(ext)) {
-        classification = await classifyFromImage(file.buffer, getImageMimeType(ext), foldersWithTags);
+        classification = await classifyFromImage(file.buffer, getImageMimeType(ext), foldersWithTags, originalNameUtf8);
       } else {
         const text = await extractText(file.buffer, ext);
         const meaningfulText = isMeaningfulText(text);

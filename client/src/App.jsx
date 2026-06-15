@@ -4,6 +4,7 @@ import FileList from './components/FileList'
 import CheatSheet from './components/CheatSheet'
 import AudioPlayer from './components/AudioPlayer'
 import Login from './components/Login'
+import Forum from './components/Forum'
 import { getFolders, classifyFiles, getFiles, updateFolder, deleteFolder, getMe } from './utils/api'
 import './index.css'
 import './App.css'
@@ -22,6 +23,36 @@ function decodeString(str) {
   }
   return str;
 }
+
+const ROW1_LOGOS = [
+  (props) => <img className="trust-logo-svg" src="/logos/harvard.svg" alt="Harvard" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/oxford.svg" alt="Oxford" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/hcmut.png" alt="HCMUT" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/hust.png" alt="HUST" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/fpt.png" alt="FPT" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/uit.png" alt="UIT" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/neu.png" alt="NEU" {...props} />
+];
+
+const ROW2_LOGOS = [
+  (props) => <img className="trust-logo-svg" src="/logos/vnuhcm.png" alt="VNU-HCM" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/ftu.png" alt="FTU" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/rmit.png" alt="RMIT" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/tdtu.png" alt="TDTU" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/ussh.png" alt="USSH" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/hcmute.png" alt="HCMUTE" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/hus.png" alt="HUS" {...props} />
+];
+
+const ROW3_LOGOS = [
+  (props) => <img className="trust-logo-svg" src="/logos/dut.png" alt="DUT" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/ptit.png" alt="PTIT" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/hcmiu.png" alt="HCMIU" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/hutech.png" alt="HUTECH" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/hiu.png" alt="HIU" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/usth.png" alt="USTH" {...props} />,
+  (props) => <img className="trust-logo-svg" src="/logos/due.png" alt="DUE" {...props} />
+];
 
 function App() {
   const [folders, setFolders] = useState([])
@@ -393,14 +424,54 @@ function App() {
           {/* Trust Partners Section */}
           <section className="trust-section">
             <div className="trust-wrapper">
-              <div className="trust-title">Được tin dùng bởi sinh viên các trường đại học hàng đầu</div>
-              <div className="trust-grid">
-                <span className="trust-logo">ĐH Bách Khoa</span>
-                <span className="trust-logo">ĐH Kinh Tế</span>
-                <span className="trust-logo">ĐH Ngoại Thương</span>
-                <span className="trust-logo">ĐH Quốc Gia</span>
-                <span className="trust-logo">VinUni</span>
-                <span className="trust-logo">RMIT</span>
+              <div className="trust-title">Được tin dùng bởi sinh viên các trường đại học hàng đầu thế giới & Việt Nam</div>
+              
+              {/* Row 1 */}
+              <div className="trust-slider-container">
+                <div className="trust-marquee trust-marquee-row-1">
+                  {ROW1_LOGOS.map((Logo, idx) => (
+                    <div key={`r1-${idx}`} className="trust-logo-item">
+                      <Logo />
+                    </div>
+                  ))}
+                  {ROW1_LOGOS.map((Logo, idx) => (
+                    <div key={`r1-dup-${idx}`} className="trust-logo-item">
+                      <Logo />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 2 (Reversed direction) */}
+              <div className="trust-slider-container">
+                <div className="trust-marquee trust-marquee-row-2">
+                  {ROW2_LOGOS.map((Logo, idx) => (
+                    <div key={`r2-${idx}`} className="trust-logo-item">
+                      <Logo />
+                    </div>
+                  ))}
+                  {ROW2_LOGOS.map((Logo, idx) => (
+                    <div key={`r2-dup-${idx}`} className="trust-logo-item">
+                      <Logo />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 3 */}
+              <div className="trust-slider-container">
+                <div className="trust-marquee trust-marquee-row-3">
+                  {ROW3_LOGOS.map((Logo, idx) => (
+                    <div key={`r3-${idx}`} className="trust-logo-item">
+                      <Logo />
+                    </div>
+                  ))}
+                  {ROW3_LOGOS.map((Logo, idx) => (
+                    <div key={`r3-dup-${idx}`} className="trust-logo-item">
+                      <Logo />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
@@ -524,10 +595,17 @@ function App() {
                   <span className="db-nav-text">Podcast học tập</span>
                 </button>
                 <button 
+                  className={`db-nav-item ${activeTab === 'forum' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('forum'); setSelectedFolder(null); }}
+                >
+                  <span className="db-nav-num">05</span>
+                  <span className="db-nav-text">Diễn đàn chia sẻ</span>
+                </button>
+                <button 
                   className={`db-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
                   onClick={() => { setActiveTab('settings'); setSelectedFolder(null); }}
                 >
-                  <span className="db-nav-num">05</span>
+                  <span className="db-nav-num">06</span>
                   <span className="db-nav-text">Cài đặt</span>
                 </button>
               </nav>
@@ -572,6 +650,8 @@ function App() {
                     <>WORKSPACE  /  CHEAT SHEETS</>
                   ) : activeTab === 'podcasts' ? (
                     <>WORKSPACE  /  PODCASTS</>
+                  ) : activeTab === 'forum' ? (
+                    <>WORKSPACE  /  DIỄN ĐÀN CHIA SẺ</>
                   ) : (
                     <>WORKSPACE  /  CÀI ĐẶT</>
                   )}
@@ -597,7 +677,8 @@ function App() {
                     activeTab === 'overview' ? 'Tổng quan' :
                     activeTab === 'library' ? 'Thư viện tri thức' :
                     activeTab === 'cheatsheets' ? 'Phao cứu cấp' :
-                    activeTab === 'podcasts' ? 'Podcast học tập' : 'Cài đặt'
+                    activeTab === 'podcasts' ? 'Podcast học tập' :
+                    activeTab === 'forum' ? 'Diễn đàn chia sẻ' : 'Cài đặt'
                   )}
                 </h1>
               </div>
@@ -1190,8 +1271,15 @@ function App() {
                     </div>
                   )}
 
+                  {activeTab === 'forum' && (
+                    /* ── TAB 5: DIỄN ĐÀN CHIA SẺ ── */
+                    <div className="tab-forum-pane fade-in">
+                      <Forum />
+                    </div>
+                  )}
+
                   {activeTab === 'settings' && (
-                    /* ── TAB 5: CÀI ĐẶT ── */
+                    /* ── TAB 6: CÀI ĐẶT ── */
                     <div className="tab-settings-pane fade-in">
                       
                       {/* Section 1: Personal Profile details */}
