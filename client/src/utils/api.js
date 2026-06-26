@@ -33,10 +33,12 @@ export const getFolder = (id) => API.get(`/folders/${id}`);
 export const createFolder = (data) => API.post('/folders', data);
 export const updateFolder = (id, data) => API.put(`/folders/${id}`, data);
 export const deleteFolder = (id) => API.delete(`/folders/${id}`);
+export const deleteFolders = (ids) => API.post('/folders/delete-batch', { ids });
 
 // ===== FILES =====
 export const getFiles = (folderId) => API.get('/files', { params: { folder_id: folderId } });
 export const deleteFile = (id) => API.delete(`/files/${id}`);
+export const deleteFiles = (ids) => API.post('/files/delete-batch', { ids });
 
 export const uploadFiles = (folderId, files) => {
   const formData = new FormData();

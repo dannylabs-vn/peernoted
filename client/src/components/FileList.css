@@ -4,7 +4,7 @@
 
 .file-list-header {
   display: grid;
-  grid-template-columns: 3.5fr 2.5fr 120px 120px 60px;
+  grid-template-columns: 40px 3fr 2.5fr 120px 120px 60px;
   padding: 12px 24px;
   font-size: 0.75rem;
   font-weight: 700;
@@ -12,11 +12,29 @@
   letter-spacing: 0.1em;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-subtle);
+  align-items: center;
 }
 
+/* ── Checkbox column ── */
+.file-col-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2563eb;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+/* ── File row ── */
 .file-row {
   display: grid;
-  grid-template-columns: 3.5fr 2.5fr 120px 120px 60px;
+  grid-template-columns: 40px 3fr 2.5fr 120px 120px 60px;
   align-items: center;
   padding: 16px 24px;
   margin: 8px 0;
@@ -24,6 +42,7 @@
   transition: var(--hover-transition);
   background: white;
   border: 1px solid var(--border-subtle);
+  cursor: default;
 }
 
 .file-row:hover {
@@ -32,6 +51,82 @@
   transform: translateX(4px);
 }
 
+.file-row.selected {
+  background: rgba(37, 99, 235, 0.04);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+.file-row.selected:hover {
+  background: rgba(37, 99, 235, 0.07);
+}
+
+/* ── Batch action bar ── */
+.file-batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  margin: 8px 0;
+  background: linear-gradient(135deg, #fef2f2, #fff5f5);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  animation: slideDown 0.25s ease both;
+}
+
+.file-batch-count {
+  font-size: 0.85rem;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.file-batch-count strong {
+  font-weight: 800;
+}
+
+.file-batch-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-batch-delete {
+  padding: 8px 16px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-batch-delete:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-batch-cancel {
+  padding: 8px 14px;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-batch-cancel:hover {
+  background: #f8fafc;
+  color: var(--text-primary);
+}
+
+/* ── Content columns ── */
 .file-col-name {
   display: flex;
   align-items: center;
@@ -43,6 +138,10 @@
   font-size: 1.5rem;
 }
 
+.file-name-group {
+  min-width: 0;
+}
+
 .file-name {
   font-size: 0.95rem;
   font-weight: 600;
@@ -50,11 +149,19 @@
   text-decoration: none;
 }
 
+.file-name:hover {
+  color: var(--primary);
+}
+
 .file-summary {
   font-size: 0.8rem;
   color: var(--text-secondary);
   opacity: 0.8;
   margin-top: 2px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .file-col-tags {
@@ -88,6 +195,23 @@
   border: 1px solid var(--border-subtle);
 }
 
+.file-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.file-empty h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.file-empty p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
 .btn-delete-row {
   width: 32px;
   height: 32px;
@@ -106,4 +230,16 @@
   background: #fee2e2;
   border-color: #fca5a5;
   color: #dc2626;
+}
+
+/* ── Animations ── */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

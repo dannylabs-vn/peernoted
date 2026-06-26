@@ -175,10 +175,14 @@ export default function Login({ onLoginSuccess, onBack }) {
             </div>
 
             <div className="form-group">
-              <div className="label-row">
+              {isLoginView ? (
+                <div className="label-row">
+                  <label htmlFor="password">Mật khẩu</label>
+                  <a href="#" className="forgot-password">Quên mật khẩu?</a>
+                </div>
+              ) : (
                 <label htmlFor="password">Mật khẩu</label>
-                {isLoginView && <a href="#" className="forgot-password">Quên mật khẩu?</a>}
-              </div>
+              )}
               <input
                 type="password"
                 id="password"

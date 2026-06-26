@@ -5,7 +5,7 @@ import CheatSheet from './components/CheatSheet'
 import AudioPlayer from './components/AudioPlayer'
 import Login from './components/Login'
 import Forum from './components/Forum'
-import { getFolders, classifyFiles, getFiles, updateFolder, deleteFolder, getMe } from './utils/api'
+import { getFolders, classifyFiles, getFiles, updateFolder, deleteFolder, deleteFolders, getMe } from './utils/api'
 import './index.css'
 import './App.css'
 
@@ -58,6 +58,7 @@ function App() {
   const [folders, setFolders] = useState([])
   const [selectedFolder, setSelectedFolder] = useState(null)
   const [files, setFiles] = useState([])
+  const [selectedFolderIds, setSelectedFolderIds] = useState(new Set())
   const [view, setView] = useState('files') // 'files' | 'cheatsheet' | 'podcast'
   const [isClassifying, setIsClassifying] = useState(false)
   const [classifyProgress, setClassifyProgress] = useState('')
@@ -129,10 +130,60 @@ function App() {
     try {
       await deleteFolder(folderId)
       showNotification('Đã xóa thư mục thành công', 'success')
+      // Deselect folder nếu đang xem chính thư mục bị xóa
+      if (selectedFolder?._id === folderId) {
+        setSelectedFolder(null)
+        setFiles([])
+      }
       loadFolders()
     } catch (error) {
       console.error('Error deleting folder:', error)
       showNotification('Lỗi khi xóa thư mục', 'error')
+    }
+  }
+
+  const handleDeleteSelectedFolders = async () => {
+    const count = selectedFolderIds.size
+    if (count === 0) return
+    if (!window.confirm(`Xóa ${count} thư mục đã chọn và toàn bộ tài liệu bên trong? Hành động này không thể hoàn tác.`)) return
+    try {
+      await deleteFolders([...selectedFolderIds])
+      showNotification(`Đã xóa ${count} thư mục thành công`, 'success')
+      // Deselect nếu đang xem một trong các thư mục bị xóa
+      if (selectedFolder && selectedFolderIds.has(selectedFolder._id)) {
+        setSelectedFolder(null)
+        setFiles([])
+      }
+      setSelectedFolderIds(new Set())
+      loadFolders()
+    } catch (error) {
+      console.error('Error deleting folders:', error)
+      showNotification('Lỗi khi xóa thư mục', 'error')
+    }
+  }
+
+  const toggleFolderSelect = (id) => {
+    setSelectedFolderIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAllFolders = () => {
+    const filteredFolders = folders.filter(folder => {
+        if (libraryFilter === 'PDF') return folder.pdfCount > 0;
+        if (libraryFilter === 'Hình ảnh') return folder.imageCount > 0;
+        if (libraryFilter === 'Văn bản') return folder.docCount > 0;
+        if (libraryFilter === 'Đã podcast') return !!folder.podcast_audio_url;
+        if (libraryFilter === 'Có cheat sheet') return !!folder.cheat_sheet_markdown;
+        return true;
+    });
+    if (selectedFolderIds.size === filteredFolders.length) {
+      setSelectedFolderIds(new Set())
+    } else {
+      setSelectedFolderIds(new Set(filteredFolders.map(f => f._id)))
     }
   }
 
@@ -236,6 +287,7 @@ function App() {
   const openSubjectFolder = (folderObj, defaultView = 'files') => {
     setSelectedFolder(folderObj)
     setView(defaultView)
+    setActiveTab('library')
   }
 
   // Dynamic stats calculated from real database folders
@@ -840,6 +892,24 @@ function App() {
                             <button className="btn-view-all" onClick={() => setActiveTab('library')}>Xem tất cả →</button>
                           </div>
 
+                          {/* Batch action bar for quick folders */}
+                            {selectedFolderIds.size > 0 && (
+                              <div className="file-batch-bar fade-in" style={{ marginBottom: '16px' }}>
+                                <span className="file-batch-count">Đã chọn <strong>{selectedFolderIds.size}</strong> thư mục</span>
+                                <div className="file-batch-actions">
+                                  <button className="btn-batch-delete" onClick={handleDeleteSelectedFolders}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+                                    </svg>
+                                    Xóa {selectedFolderIds.size} thư mục
+                                  </button>
+                                  <button className="btn-batch-cancel" onClick={() => setSelectedFolderIds(new Set())}>
+                                    Hủy chọn
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
                           <div className="quick-folder-grid">
                             {folders.length === 0 ? (
                               <div className="empty-state-bento fade-in">
@@ -863,22 +933,13 @@ function App() {
                             ) : (
                               folders.slice(0, 6).map((folder, index) => {
                                 const color = colors[index % colors.length];
+                                const isSelected = selectedFolderIds.has(folder._id);
                                 return (
                                   <div 
                                     key={folder._id}
-                                    className="quick-folder-card"
-                                    onClick={() => openSubjectFolder(folder)}
+                                    className={`quick-folder-card ${isSelected ? 'selected' : ''}`}
+                                    onClick={() => toggleFolderSelect(folder._id)}
                                   >
-                                    <button
-                                      className="btn-delete-folder"
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder._id, folder.name) }}
-                                      title="Xóa thư mục"
-                                      style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                    >
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
-                                      </svg>
-                                    </button>
                                     <div className="q-card-header">
                                       <div className="q-folder-icon" style={{ background: color }}></div>
                                       <span className="q-file-count">{folder.fileCount || 0} files</span>
@@ -891,7 +952,12 @@ function App() {
                                     </div>
                                     <div className="q-card-footer">
                                       <span className="q-update-time">Cập nhật {new Date(folder.updatedAt).toLocaleDateString('vi-VN')}</span>
-                                      <span className="q-arrow">→</span>
+                                      <span 
+                                        className="q-arrow" 
+                                        onClick={(e) => { e.stopPropagation(); openSubjectFolder(folder); }}
+                                        title="Mở thư mục"
+                                        style={{ cursor: 'pointer' }}
+                                      >→</span>
                                     </div>
                                   </div>
                                 );
@@ -1112,7 +1178,6 @@ function App() {
                                           className="btn-delete-icon"
                                           title="Xóa thư mục"
                                           onClick={() => handleDeleteFolder(folder._id, folder.name)}
-                                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                         >
                                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>

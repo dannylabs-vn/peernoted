@@ -84,4 +84,32 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST delete multiple files (batch)
+router.post('/delete-batch', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids must be a non-empty array' });
+    }
+
+    const { data, error } = await supabase
+      .from('files')
+      .delete()
+      .in('id', ids)
+      .select('*');
+    if (error) throw error;
+
+    // Clean up storage for each file
+    for (const file of data || []) {
+      if (file.storage_url) {
+        try { await deleteFromStorage(file.storage_url); } catch (e) { /* ignore */ }
+      }
+    }
+
+    res.json({ message: `${data?.length || 0} files deleted`, deleted: data?.length || 0 });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

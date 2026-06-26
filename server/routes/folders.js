@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { supabase, toApi, toApiList } = require('../config/supabase');
+const { deleteFromStorage } = require('../services/storageService');
 
 const IMAGE_TYPES = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 const DOC_TYPES = ['docx', 'doc', 'txt'];
@@ -100,18 +101,72 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE folder + its files (cascade handled by FK on delete cascade)
+// DELETE folder — xóa hết files trước, sau đó xóa folder
 router.delete('/:id', async (req, res) => {
   try {
+    const folderId = req.params.id;
+
+    // 1. Xóa hết files trong folder (kèm cleanup storage)
+    const { data: files, error: fileErr } = await supabase
+      .from('files')
+      .delete()
+      .eq('folder_id', folderId)
+      .select('*');
+    if (fileErr) throw fileErr;
+
+    for (const file of files || []) {
+      if (file.storage_url) {
+        try { await deleteFromStorage(file.storage_url); } catch (e) { /* ignore */ }
+      }
+    }
+
+    // 2. Xóa folder
     const { data, error } = await supabase
       .from('folders')
       .delete()
-      .eq('id', req.params.id)
+      .eq('id', folderId)
       .select('id')
       .maybeSingle();
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Folder not found' });
+
     res.json({ message: 'Folder and its files deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST delete multiple folders (batch) — xóa hết files trước, sau đó xóa folders
+router.post('/delete-batch', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids must be a non-empty array' });
+    }
+
+    // 1. Xóa hết files trong các folder
+    const { data: files, error: fileErr } = await supabase
+      .from('files')
+      .delete()
+      .in('folder_id', ids)
+      .select('*');
+    if (fileErr) throw fileErr;
+
+    for (const file of files || []) {
+      if (file.storage_url) {
+        try { await deleteFromStorage(file.storage_url); } catch (e) { /* ignore */ }
+      }
+    }
+
+    // 2. Xóa các folders
+    const { data, error } = await supabase
+      .from('folders')
+      .delete()
+      .in('id', ids)
+      .select('id');
+    if (error) throw error;
+
+    res.json({ message: `${data?.length || 0} folders deleted`, deleted: data?.length || 0 });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
