@@ -6,48 +6,48 @@ PeerNoted là một nền tảng quản lý tri thức cá nhân và học tập
 
 ## 1. Tính năng chính
 
-### 📚 Quản lý tri thức cá nhân
+###  Quản lý tri thức cá nhân
 - **Upload thông minh**: Kéo–thả tài liệu (PDF, DOCX, TXT, hình ảnh), AI tự động trích xuất nội dung
 - **Phân loại tự động**: GPT-4o-mini phân tích → gắn nhãn môn học, chương, lớp học
 - **Thư viện trực quan**: Xem tất cả tài liệu theo folder, tìm kiếm, lọc, xóa hàng loạt
 - **Trích xuất chữ viết tay**: GPT-4o vision OCR cho ảnh chụp tài liệu
 
-### 📝 Cheat Sheet (Phao cứu cấp)
+###  Cheat Sheet (Phao cứu cấp)
 - AI tóm tắt nội dung folder thành cheat sheet có cấu trúc (công thức, định nghĩa, danh sách, ví dụ, ghi chú)
 - **4 template hiển thị**: Academic Blue, Modern Card, Sketch Notebook, Minimalist
 - **Hỗ trợ chữ viết tay**: Upload ảnh → AI nhận dạng và chọn font handwriting phù hợp
 - **Export PDF/PNG**: 1 trang duy nhất, dùng html2canvas + jspdf
 
-### 🎧 Podcast học tập
+###  Podcast học tập
 - Chuyển đổi tài liệu thành hội thoại 2 MC (NamMinh + HoaiMy)
 - Dùng Microsoft Edge TTS Neural (miễn phí, không cần key)
 - Cache script + audio, có thể tải lại
 
-### 🎯 Gợi ý học tập
+###  Gợi ý học tập
 - AI gợi ý video YouTube, podcast, bài viết liên quan đến nội dung
 - Search YouTube trực tiếp với từ khóa thông minh
 
-### 🏠 Phòng Học (Study Rooms)
+###  Phòng Học (Study Rooms)
 - Tạo phòng học nhóm với kênh thảo luận (channels)
 - **Chat thời gian thực** qua Socket.IO
 - Chia sẻ file trong phòng
 - Danh sách thành viên + quyền hạn
 - Mời bạn qua link (invite code)
 
-### ⭐ Peer Points
+###  Peer Points
 - Kiếm điểm khi tham gia phòng học, đăng bài, chia sẻ tài liệu
 - Cửa hàng đổi thưởng (themes, icons, badges)
 
-### 🌙 Dark Mode
+###  Dark Mode
 - Giao diện Discord-inspired, tương phản cao
 - Lưu trạng thái qua localStorage
 - Đồng bộ toàn bộ trang (landing + dashboard + tất cả tab)
 
-### 💬 Diễn đàn chia sẻ
+###  Diễn đàn chia sẻ
 - Chia sẻ cheat sheet, podcast ra diễn đàn công khai
 - Like, comment, tương tác
 
-### 🔐 Bảo mật
+###  Bảo mật
 - JWT authentication (email/password hoặc Google OAuth)
 - bcryptjs hash password (10 salt rounds)
 - JSON Schema strict mode cho mọi LLM call → chống hallucination
