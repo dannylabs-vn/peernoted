@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { supabase, toApi } = require('../config/supabase');
+const { protect } = require('../middleware/auth');
 const {
   classifyFromText,
   classifyFromImage,
@@ -500,5 +501,124 @@ router.post('/recommend/:folderId', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ===========================================================================
+// POST /api/ai/suggest-role — AI suggests roles for room members
+// ===========================================================================
+router.post('/suggest-role', protect, async (req, res) => {
+  try {
+    const { roomId, memberIds } = req.body;
+    if (!roomId || !memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ error: 'Thieu thong tin roomId hoac memberIds' });
+    }
+
+    // Get room info
+    const { data: room } = await supabase
+      .from('rooms')
+      .select('name, topic')
+      .eq('id', roomId)
+      .maybeSingle();
+
+    if (!room) return res.status(404).json({ error: 'Khong tim thay phong' });
+
+    // Get files in room for context
+    const { data: roomFiles } = await supabase
+      .from('room_files')
+      .select('original_name, extracted_text')
+      .eq('room_id', roomId)
+      .limit(10);
+
+    const filesText = (roomFiles || [])
+      .map(f => `File: ${f.original_name}\nNoi dung: ${(f.extracted_text || '').slice(0, 1000)}`)
+      .join('\n\n');
+
+    // Get member names
+    const { data: members } = await supabase
+      .from('users')
+      .select('id, name')
+      .in('id', memberIds);
+
+    const memberNames = (members || []).map(m => m.name).join(', ');
+
+    // Build prompt
+    const promptContent = rolePrompt(room.name, room.topic, filesText, memberNames);
+
+    // Call OpenAI
+    const { default: OpenAI } = await import('openai');
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: promptContent }],
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+
+    const responseText = completion.choices[0]?.message?.content || '';
+    
+    // Parse suggestions from response
+    const suggestions = parseRoleSuggestions(responseText, memberIds, members || []);
+    
+    res.json({ suggestions, raw_response: responseText });
+  } catch (error) {
+    console.error('[AI /suggest-role]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+function rolePrompt(roomName, topic, filesContent, memberNames) {
+  return `Ban la tro ly AI chuyen nghiep giup phan cong vai tro hoc tap trong phong "${roomName}" (chu de: ${topic || 'khong xac dinh'}).
+
+Tai lieu hoc tap trong phong:
+${filesContent || 'Khong co tai lieu nao.'}
+
+Thanh vien: ${memberNames}
+
+Cac vai tro co san:
+- Academic Lead (Truong giao hoc thuat): Danh cho nguoi co kien thuc tot nhat ve chu de chinh.
+- Note Taker (Nguoi ghi chep): Ghi lai y chinh va tom tat noi dung.
+- Question Master (Chuyen gia cau hoi): Dat cau hoi de ca nhom thao luan.
+- Resource Finder (Nguoi tim tai lieu): Tim them tai lieu tham khao.
+- Quiz Master (Nguoi ra de): Tao cau hoi trac nghiem de kiem tra.
+
+Hay goi y vai tro phu hop cho TUNG thanh vien dua tren ten cua ho va tai lieu co san.
+Tra loi theo dinh dang JSON:
+[
+  { "userId": "...", "suggestedRole": "...", "reason": "..." },
+  ...
+]
+
+Chi tra ve JSON array, khong co text khac.`;
+}
+
+function parseRoleSuggestions(responseText, memberIds, members) {
+  try {
+    // Try to find JSON array in response
+    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.map(s => {
+        const member = members.find(m => m.id === s.userId || m.name === s.userId);
+        return {
+          userId: member?.id || s.userId,
+          userName: member?.name || s.userId,
+          suggestedRole: s.suggestedRole,
+          reason: s.reason
+        };
+      });
+    }
+  } catch (e) {
+    console.error('[AI] Failed to parse role suggestions:', e.message);
+  }
+
+  // Fallback: assign random roles
+  const roleOptions = ['Academic Lead', 'Note Taker', 'Question Master', 'Resource Finder', 'Quiz Master'];
+  return members.map((m, i) => ({
+    userId: m.id,
+    userName: m.name,
+    suggestedRole: roleOptions[i % roleOptions.length],
+    reason: 'GOI Y TU DONG (AI khong phan tich duoc)'
+  }));
+}
 
 module.exports = router;

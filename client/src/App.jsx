@@ -5,6 +5,8 @@ import CheatSheet from './components/CheatSheet'
 import AudioPlayer from './components/AudioPlayer'
 import Login from './components/Login'
 import Forum from './components/Forum'
+import RoomList from './components/RoomList'
+import RoomView from './components/RoomView'
 import { getFolders, classifyFiles, getFiles, updateFolder, deleteFolder, deleteFolders, getMe } from './utils/api'
 import './index.css'
 import './App.css'
@@ -67,7 +69,8 @@ function App() {
   // Navigation states
   const [showDashboard, setShowDashboard] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
-  const [activeTab, setActiveTab] = useState('overview') // 'overview' | 'library' | 'cheatsheets' | 'podcasts' | 'settings'
+  const [activeTab, setActiveTab] = useState('overview') // 'overview' | 'library' | 'cheatsheets' | 'podcasts' | 'forum' | 'rooms' | 'settings'
+  const [activeRoom, setActiveRoom] = useState(null)
 
   // Form states for settings
   const [profileName, setProfileName] = useState('Nguyễn An')
@@ -80,6 +83,29 @@ function App() {
   // Rename states
   const [renamingFolder, setRenamingFolder] = useState(null)
   const [newFolderName, setNewFolderName] = useState('')
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('peernoted-dark-mode')
+    return saved === 'true'
+  })
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const next = !prev
+      localStorage.setItem('peernoted-dark-mode', next)
+      return next
+    })
+  }
+
+  // Sync dark mode to body so CSS variables cascade everywhere
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode')
+    } else {
+      document.body.classList.remove('dark-mode')
+    }
+  }, [darkMode])
 
   // Load folders
   const loadFolders = useCallback(async () => {
@@ -296,7 +322,7 @@ function App() {
   const totalPodcasts = folders.filter(f => f.podcast_audio_url || (f.podcast_script && f.podcast_script.length > 0)).length;
 
   return (
-    <div className={`app-layout ${showDashboard ? 'dashboard-active' : ''}`}>
+    <div className={`app-layout ${showDashboard ? 'dashboard-active' : ''}${darkMode ? ' dark-mode' : ''}`}>
       {/* ── Notification Toast ── */}
       {notification && (
         <div className={`toast toast-${notification.type}`}>
@@ -599,7 +625,7 @@ function App() {
         /* ═══════════════════════════════════════════════════════════════
            WORKSPACE MODE: Full Screen Responsive Dashboard (Image 4 & 5)
            ═══════════════════════════════════════════════════════════════ */
-        <div className="dashboard-container fade-in">
+        <div className={`dashboard-container fade-in${darkMode ? ' dark-mode' : ''}`}>
           
           {/* Left persistent sidebar */}
           <aside className="db-sidebar">
@@ -654,10 +680,17 @@ function App() {
                   <span className="db-nav-text">Diễn đàn chia sẻ</span>
                 </button>
                 <button 
+                  className={`db-nav-item ${activeTab === 'rooms' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('rooms'); setSelectedFolder(null); setActiveRoom(null); }}
+                >
+                  <span className="db-nav-num">06</span>
+                  <span className="db-nav-text">Phòng Học</span>
+                </button>
+                <button 
                   className={`db-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
                   onClick={() => { setActiveTab('settings'); setSelectedFolder(null); }}
                 >
-                  <span className="db-nav-num">06</span>
+                  <span className="db-nav-num">07</span>
                   <span className="db-nav-text">Cài đặt</span>
                 </button>
               </nav>
@@ -682,6 +715,12 @@ function App() {
                   <div className="db-storage-fill" style={{ width: '34%' }}></div>
                 </div>
               </div>
+
+              {/* Dark Mode Toggle */}
+              <button className="db-dark-toggle" onClick={toggleDarkMode} title={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}>
+                <span className="db-dark-toggle-icon">{darkMode ? '☀️' : '🌙'}</span>
+                <span className="db-dark-toggle-label">{darkMode ? 'Chế độ sáng' : 'Chế độ tối'}</span>
+              </button>
             </div>
           </aside>
 
@@ -704,6 +743,8 @@ function App() {
                     <>WORKSPACE  /  PODCASTS</>
                   ) : activeTab === 'forum' ? (
                     <>WORKSPACE  /  DIỄN ĐÀN CHIA SẺ</>
+                  ) : activeTab === 'rooms' ? (
+                    activeRoom ? <>PHÒNG HỌC  /  {activeRoom.name?.toUpperCase()}</> : <>WORKSPACE  /  PHÒNG HỌC</>
                   ) : (
                     <>WORKSPACE  /  CÀI ĐẶT</>
                   )}
@@ -1340,6 +1381,27 @@ function App() {
                     /* ── TAB 5: DIỄN ĐÀN CHIA SẺ ── */
                     <div className="tab-forum-pane fade-in">
                       <Forum />
+                    </div>
+                  )}
+
+                  {activeTab === 'rooms' && !activeRoom && (
+                    /* ── TAB 6: PHÒNG HỌC ── */
+                    <div className="tab-rooms-pane fade-in">
+                      <RoomList
+                        onEnterRoom={(room) => setActiveRoom(room)}
+                      />
+                    </div>
+                  )}
+
+                  {activeTab === 'rooms' && activeRoom && (
+                    <div className="tab-room-view-pane fade-in">
+                      <RoomView
+                        room={activeRoom}
+                        user={(() => {
+                          try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch(e) { return {}; }
+                        })()}
+                        onBack={() => setActiveRoom(null)}
+                      />
                     </div>
                   )}
 

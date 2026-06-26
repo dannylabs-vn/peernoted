@@ -772,3 +772,54 @@ p {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — Discord-inspired theme
+   ═══════════════════════════════════════════════════════════════ */
+
+.dark-mode {
+  --primary: #5865f2 !important;
+  --primary-hover: #4752c4 !important;
+  --primary-light: rgba(88, 101, 242, 0.18) !important;
+  
+  --bg-main: #111118 !important;
+  --bg-surface: #1c1c24 !important;
+  --bg-elevated: #24242e !important;
+  
+  --text-primary: #ffffff !important;
+  --text-secondary: #d3d7de !important;
+  --text-muted: #a1a6b0 !important;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08) !important;
+  --border-accent: rgba(88, 101, 242, 0.35) !important;
+  
+  --gradient-ai: linear-gradient(135deg, #5865f2 0%, #7c3aed 100%) !important;
+  --gradient-glass: linear-gradient(135deg, rgba(36, 36, 46, 0.9) 0%, rgba(36, 36, 46, 0.5) 100%) !important;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+  --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important;
+  --shadow-lg: 0 12px 20px -4px rgba(0, 0, 0, 0.4), 0 4px 8px -2px rgba(0, 0, 0, 0.3) !important;
+  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+.dark-mode body,
+.dark-mode {
+  background: #1e1e2e !important;
+  color: #f2f3f5 !important;
+}
+
+/* Dark mode needs .app-layout to also carry the theme */
+.app-layout.dark-mode {
+  background: 
+    radial-gradient(circle at 80% 20%, rgba(88, 101, 242, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 20% 80%, rgba(88, 101, 242, 0.05) 0%, transparent 40%) !important;
+}
+
+.dashboard-container.dark-mode {
+  background: #1e1e2e;
+}
+
+.dark-mode .glass {
+  background: rgba(49, 51, 56, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
