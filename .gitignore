@@ -50,3 +50,6 @@ coverage/
 .eslintcache
 .npm/
 .yarn/
+
+# ===== Agents / AI config =====.agents/
+skills-lock.json
