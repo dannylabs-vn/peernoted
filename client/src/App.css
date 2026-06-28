@@ -2730,7 +2730,12 @@
   padding: 16px;
   text-align: center;
   transition: all 0.2s;
-}\r\n\r\n.reward-card:hover {\r\n  border-color: #5865f2;\r\n}\r\n
+}
+
+.reward-card:hover {
+  border-color: #5865f2;
+}
+
 .dark-mode .cs-title {
   color: #f2f3f5;
 }
@@ -2921,7 +2926,7 @@
 
 
 /* ---------------------------------------------------------------
-   DARK MODE — LANDING PAGE OVERRIDES (high contrast)
+   DARK MODE â€” LANDING PAGE OVERRIDES (high contrast)
    --------------------------------------------------------------- */
 
 /* -- Landing Header -- */
