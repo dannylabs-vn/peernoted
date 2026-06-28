@@ -198,10 +198,10 @@ p {
 
 /* ── Glassmorphism Utility ── */
 .glass {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--gradient-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-premium);
 }
 
@@ -221,25 +221,26 @@ p {
 }
 
 .btn-primary {
-  background: #0f172a; /* Custom dark navy buttons */
-  color: #ffffff;
-  border: 1px solid #0f172a;
+  background: var(--text-primary);  /* dark slate light mode / light slate dark mode */
+  color: var(--text-inverse);
+  border: 1px solid var(--text-primary);
 }
 
 .btn-primary:hover {
-  background: #1e293b;
+  background: var(--text-secondary);
+  border-color: var(--text-secondary);
   transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background: #ffffff;
+  background: var(--bg-surface);
   color: var(--text-primary);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
 }
 
 .btn-secondary:hover {
-  background: #f8fafc;
-  border-color: rgba(0, 0, 0, 0.2);
+  background: var(--bg-secondary);
+  border-color: var(--border-strong);
   transform: translateY(-1px);
 }
 
@@ -444,7 +445,7 @@ p {
 .workspace-window {
   display: flex;
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.1);

@@ -52,7 +52,7 @@
 .landing-mac-preview-card {
   width: 100%;
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
@@ -98,7 +98,7 @@
 .mac-preview-header {
   height: 48px;
   background: var(--bg-main);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -166,7 +166,7 @@
 .mac-preview-sidebar {
   width: 220px;
   background: var(--bg-main);
-  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  border-right: 1px solid var(--border-subtle);
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
@@ -195,7 +195,7 @@
 /* Sidebar progress indicator mockup */
 .sidebar-progress-box {
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-subtle);
   padding: 12px;
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
@@ -242,7 +242,7 @@
 
 .document-sheet {
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 32px;
   width: 100%;
@@ -292,7 +292,7 @@
   font-weight: 700;
   color: var(--text-secondary);
   background: var(--bg-secondary);
-  border: 1px solid rgba(0,0,0,0.03);
+  border: 1px solid var(--border-subtle);
   padding: 4px 10px;
   border-radius: 6px;
 }
@@ -311,7 +311,7 @@
 .db-sidebar {
   width: 250px;
   background: var(--bg-surface);
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  border-right: 1px solid var(--border-subtle);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -398,20 +398,21 @@
 }
 
 .db-nav-item.active {
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--text-inverse);
 }
 
 .db-nav-num {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
-  opacity: 0.5;
+  color: var(--text-muted);
+  opacity: 0.85;
 }
 
 .db-nav-item.active .db-nav-num {
-  opacity: 0.8;
-  color: var(--primary);
+  color: var(--text-inverse);
+  opacity: 0.9;
 }
 
 .db-nav-text {
@@ -421,7 +422,7 @@
 }
 
 .db-nav-item.active .db-nav-text {
-  color: #ffffff;
+  color: var(--text-inverse);
 }
 
 /* Sidebar Footer (Profile / Storage) */
@@ -429,7 +430,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 20px;
 }
 
@@ -471,7 +472,7 @@
 
 .db-storage-card {
   background: var(--bg-main);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 10px 12px;
 }
@@ -506,7 +507,7 @@
   padding: 10px 14px;
   border-radius: 8px;
   background: rgba(0,0,0,0.02);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
   width: 100%;
@@ -539,7 +540,7 @@
 
 .db-pane-header {
   height: 80px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   display: flex;
   align-items: center;
@@ -580,7 +581,7 @@
   width: 100%;
   height: 38px;
   background: var(--bg-main);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 0 36px 0 32px;
   font-size: 0.8rem;
@@ -607,7 +608,7 @@
   position: absolute;
   right: 8px;
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   font-family: monospace;
   font-size: 0.65rem;
   font-weight: 700;
@@ -622,7 +623,7 @@
   height: 38px;
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -666,7 +667,7 @@
 .dashboard-dropzone-wrapper .dropzone {
   margin: 0 !important;
   padding: 48px 32px !important;
-  border: 2px dashed rgba(0,0,0,0.08) !important;
+  border: 2px dashed var(--border-subtle) !important;
   background: var(--bg-surface) !important;
 }
 
@@ -707,7 +708,7 @@
 
 .metric-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 20px;
   box-shadow: var(--shadow-sm);
@@ -817,7 +818,7 @@
 
 .quick-folder-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 16px 20px;
   box-shadow: var(--shadow-sm);
@@ -904,7 +905,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid rgba(0,0,0,0.04);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 10px;
 }
 
@@ -927,7 +928,7 @@
 /* Activity logs details */
 .activity-list {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 16px;
   box-shadow: var(--shadow-sm);
@@ -944,7 +945,7 @@
   gap: 12px;
   font-size: 0.78rem;
   color: var(--text-primary);
-  border-bottom: 1px solid rgba(0,0,0,0.03);
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 10px;
 }
 
@@ -1079,7 +1080,7 @@
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   cursor: pointer;
   transition: var(--hover-transition);
@@ -1106,7 +1107,7 @@
 
 .btn-sort-dropdown {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   padding: 6px 12px;
   border-radius: 8px;
   font-size: 0.75rem;
@@ -1121,7 +1122,7 @@
 /* Wide table lists layout */
 .library-table-wrapper {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -1135,7 +1136,7 @@
 
 .library-table th {
   background: var(--bg-main);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid var(--border-subtle);
   padding: 14px 24px;
   font-size: 0.7rem;
   font-weight: 800;
@@ -1146,7 +1147,7 @@
 
 .library-table td {
   padding: 16px 24px;
-  border-bottom: 1px solid rgba(0,0,0,0.04);
+  border-bottom: 1px solid var(--border-subtle);
   font-size: 0.85rem;
   vertical-align: middle;
 }
@@ -1244,7 +1245,7 @@
 
 .cs-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--shadow-sm);
@@ -1300,7 +1301,7 @@
 
 .cs-stat-box {
   background: var(--bg-main);
-  border: 1px solid rgba(0,0,0,0.03);
+  border: 1px solid var(--border-subtle);
   padding: 12px;
   border-radius: 8px;
   display: flex;
@@ -1436,7 +1437,7 @@
 
 .podcast-row-item {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 16px 24px;
   box-shadow: var(--shadow-sm);
@@ -1524,7 +1525,7 @@
    ═══════════════════════════════════════════════════════════════ */
 .settings-section-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 28px;
   box-shadow: var(--shadow-sm);
@@ -1536,7 +1537,7 @@
 }
 
 .s-card-header {
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 16px;
   margin-bottom: 20px;
 }
@@ -1602,7 +1603,7 @@
 .form-group input {
   height: 42px;
   background: var(--bg-main);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 0 14px;
   font-size: 0.85rem;
@@ -1628,7 +1629,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(0,0,0,0.04);
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 14px;
   gap: 16px;
 }
@@ -1657,7 +1658,7 @@
 
 .config-dropdown-btn {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 0.8rem;
@@ -1688,7 +1689,7 @@
 
 .btn-back-library {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 0.8rem;
@@ -1713,7 +1714,7 @@
 
 .btn-toggle-tool {
   background: var(--bg-surface);
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid var(--border-subtle);
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 0.8rem;
@@ -1794,7 +1795,7 @@
   padding: 48px 20px;
   text-align: center;
   background: rgba(255, 255, 255, 0.2);
-  border: 1px dashed rgba(0, 0, 0, 0.05);
+  border: 1px dashed var(--border-subtle);
   border-radius: 12px;
 }
 
@@ -1879,7 +1880,7 @@
 .btn-play-podcast-row.empty {
   background: var(--bg-secondary) !important;
   color: var(--text-muted) !important;
-  border: 1px solid rgba(0,0,0,0.04);
+  border: 1px solid var(--border-subtle);
 }
 
 /* --- Modal Backdrop and Rename Modal (Premium Slate Glassmorphism) --- */
