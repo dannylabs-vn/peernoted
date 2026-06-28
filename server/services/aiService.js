@@ -5,25 +5,35 @@ const SCHEMAS = require('../utils/schemas');
 let _client = null;
 let TEXT_MODEL = 'gpt-4o-mini';
 let VISION_MODEL = 'gpt-4o';
+let PROVIDER = 'openai';   // 'openai' | 'gemini'
 
+// Chọn provider qua env AI_PROVIDER (openai | gemini). Mặc định:
+// - Nếu OPENAI_API_KEY có → openai
+// - Còn lại nếu GEMINI_API_KEY có → gemini
+// Set AI_PROVIDER=gemini để FORCE Gemini ngay cả khi có OPENAI_API_KEY.
 function getClient() {
   if (!_client) {
-    // Ưu tiên OpenAI vì hỗ trợ Structured Outputs strict mode (Gemini KHÔNG hỗ trợ
-    // đầy đủ → schema phức tạp sẽ fail). Gemini chỉ dùng làm fallback khi không có
-    // OpenAI key.
-    if (process.env.OPENAI_API_KEY) {
-      _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      TEXT_MODEL = 'gpt-4o-mini';
-      VISION_MODEL = 'gpt-4o';
-    } else if (process.env.GEMINI_API_KEY) {
+    const explicit = (process.env.AI_PROVIDER || '').trim().toLowerCase();
+    const wantGemini = explicit === 'gemini' || (!explicit && !process.env.OPENAI_API_KEY && process.env.GEMINI_API_KEY);
+    const wantOpenAI = explicit === 'openai' || (!explicit && process.env.OPENAI_API_KEY);
+
+    if (wantGemini && process.env.GEMINI_API_KEY) {
       _client = new OpenAI({
         apiKey: process.env.GEMINI_API_KEY,
         baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/'
       });
-      TEXT_MODEL = 'gemini-1.5-flash';
-      VISION_MODEL = 'gemini-1.5-flash';
+      TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-2.0-flash';
+      VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.0-flash';
+      PROVIDER = 'gemini';
+      console.log(`[AI] Provider=gemini model=${TEXT_MODEL}`);
+    } else if (wantOpenAI && process.env.OPENAI_API_KEY) {
+      _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      TEXT_MODEL = 'gpt-4o-mini';
+      VISION_MODEL = 'gpt-4o';
+      PROVIDER = 'openai';
+      console.log(`[AI] Provider=openai model=${TEXT_MODEL}`);
     } else {
-      throw new Error('OPENAI_API_KEY hoặc GEMINI_API_KEY chưa được điền trong .env');
+      throw new Error('OPENAI_API_KEY hoặc GEMINI_API_KEY chưa được điền trong .env (kiểm tra AI_PROVIDER nếu set explicit)');
     }
   }
   return _client;
@@ -32,7 +42,45 @@ function getClient() {
 // Pre-initialize on module load (nếu key có sẵn)
 try { getClient(); } catch (e) {}
 
+// Gemini không hỗ trợ response_format: json_schema strict mode đầy đủ qua
+// OpenAI-compat endpoint → phải dùng json_object mode + nhúng schema description
+// vào prompt. Helper convert schema JSON thành prompt text dễ hiểu cho LLM.
+function schemaToHint(schema) {
+  const s = schema?.schema || {};
+  return `\n\nQUAN TRỌNG: Trả về JSON THUẦN (không markdown code block), tuân thủ schema:\n${JSON.stringify(s, null, 2)}\n\nMọi field bắt buộc phải có (dùng null nếu không áp dụng).`;
+}
+
 async function chatJSON({ model, messages, schema, maxTokens = 16000 }) {
+  if (PROVIDER === 'gemini') {
+    // Append schema hint vào user message cuối cùng
+    const augmented = messages.map((m, i) => {
+      if (i === messages.length - 1 && m.role === 'user') {
+        if (typeof m.content === 'string') {
+          return { ...m, content: m.content + schemaToHint(schema) };
+        }
+        // multimodal content (array) — chèn schema hint vào phần text đầu
+        return {
+          ...m,
+          content: m.content.map((c, idx) => idx === 0 && c.type === 'text'
+            ? { ...c, text: c.text + schemaToHint(schema) } : c)
+        };
+      }
+      return m;
+    });
+
+    const completion = await getClient().chat.completions.create({
+      model,
+      messages: augmented,
+      max_tokens: maxTokens,
+      response_format: { type: 'json_object' }
+    });
+    const raw = completion.choices[0].message.content;
+    // Gemini đôi khi vẫn bọc trong ```json ... ``` → strip trước parse
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+    return JSON.parse(cleaned);
+  }
+
+  // OpenAI: dùng Structured Outputs strict mode (đảm bảo schema 100%)
   const completion = await getClient().chat.completions.create({
     model,
     messages,
