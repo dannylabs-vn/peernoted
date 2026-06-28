@@ -22,8 +22,10 @@ function getClient() {
         apiKey: process.env.GEMINI_API_KEY,
         baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/'
       });
-      TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-2.0-flash';
-      VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.0-flash';
+      // 2.5-flash > 2.0-flash với schema-in-prompt approach: instruction following
+      // ổn định hơn, ít miss field optional hơn, tốt hơn cho context dài tiếng Việt.
+      TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash';
+      VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
       PROVIDER = 'gemini';
       console.log(`[AI] Provider=gemini model=${TEXT_MODEL}`);
     } else if (wantOpenAI && process.env.OPENAI_API_KEY) {
