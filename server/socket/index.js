@@ -79,25 +79,70 @@ function setupSocket(io) {
     });
 
     // ── Send message ──
-    socket.on('send-message', async ({ roomId, channelId, content }) => {
-      if (!content || !content.trim()) return;
-      if (!roomId || !channelId) return;
-
-      const message = {
-        id: `${Date.now()}-${socket.userId}`,
-        roomId,
-        channelId,
-        user: socket.user,
-        content: content.trim(),
-        type: 'text',
-        createdAt: new Date().toISOString()
+    socket.on('send-message', async ({ roomId, channelId, content }, ack) => {
+      const reply = (payload) => {
+        if (typeof ack === 'function') ack(payload);
       };
 
-      // Broadcast to room (exclude sender for now, they'll optimistically add it)
-      socket.to(roomId).emit('new-message', message);
+      try {
+        if (!content || !content.trim()) {
+          reply({ ok: false, error: 'Tin nhắn trống' });
+          return;
+        }
+        if (!roomId || !channelId) {
+          reply({ ok: false, error: 'Thiếu room hoặc channel' });
+          return;
+        }
 
-      // Also send back to sender for confirmation
-      socket.emit('new-message', message);
+        // Verify membership before allowing a message to be broadcast.
+        const { data: member, error: memberError } = await supabase
+          .from('room_members')
+          .select('id')
+          .eq('room_id', roomId)
+          .eq('user_id', socket.userId)
+          .maybeSingle();
+
+        if (memberError) throw memberError;
+        if (!member) {
+          reply({ ok: false, error: 'Bạn không phải thành viên của phòng này' });
+          return;
+        }
+
+        const { data: channel, error: channelError } = await supabase
+          .from('room_channels')
+          .select('id')
+          .eq('id', channelId)
+          .eq('room_id', roomId)
+          .maybeSingle();
+
+        if (channelError) throw channelError;
+        if (!channel) {
+          reply({ ok: false, error: 'Channel không tồn tại trong phòng này' });
+          return;
+        }
+
+        if (!socket.rooms.has(roomId)) {
+          socket.join(roomId);
+          socket.currentRoom = roomId;
+        }
+
+        const message = {
+          id: `${Date.now()}-${socket.userId}`,
+          roomId,
+          channelId,
+          user: socket.user,
+          content: content.trim(),
+          type: 'text',
+          createdAt: new Date().toISOString()
+        };
+
+        // Broadcast to room, including sender.
+        io.to(roomId).emit('new-message', message);
+        reply({ ok: true, message });
+      } catch (err) {
+        console.error('[Socket send-message]', err);
+        reply({ ok: false, error: err.message || 'Không gửi được tin nhắn' });
+      }
     });
 
     // ── Typing ──

@@ -5,8 +5,8 @@ const { supabase, toApi, toApiList } = require('../config/supabase');
 const { protect } = require('../middleware/auth');
 
 // ─── Max limits ───
-const MAX_ROOMS_PER_USER = 3;
-const MAX_MEMBERS_PER_ROOM = 10;
+const MAX_ROOMS_PER_USER = Number(process.env.MAX_ROOMS_PER_USER || 3);
+const MAX_MEMBERS_PER_ROOM = Number(process.env.MAX_MEMBERS_PER_ROOM || 100);
 
 // ===========================================================================
 // POST /api/rooms — Create a new room
@@ -87,35 +87,61 @@ router.post('/', protect, async (req, res) => {
 router.get('/', protect, async (req, res) => {
   try {
     // Rooms user has joined
-    const { data: myMemberships } = await supabase
+    const { data: myMemberships, error: membershipError } = await supabase
       .from('room_members')
-      .select('room_id')
+      .select('room_id, role')
       .eq('user_id', req.user.id);
 
-    const myRoomIds = (myMemberships || []).map(m => m.room_id);
+    if (membershipError) throw membershipError;
 
-    // Public rooms (excluding owned ones already shown)
-    const { data: publicRooms } = await supabase
+    const myMembershipByRoom = new Map((myMemberships || []).map(m => [m.room_id, m]));
+    const myRoomIds = Array.from(myMembershipByRoom.keys());
+
+    // Public rooms everyone can discover.
+    const { data: publicRooms, error: publicError } = await supabase
       .from('rooms')
       .select('*, owner:owner_id(id, name, email, avatar_url)')
       .eq('is_public', true)
       .order('created_at', { ascending: false })
       .limit(50);
 
+    if (publicError) throw publicError;
+
+    // Private/public rooms already joined by this user must also be listed.
+    let joinedRooms = [];
+    if (myRoomIds.length > 0) {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('*, owner:owner_id(id, name, email, avatar_url)')
+        .in('id', myRoomIds)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      joinedRooms = data || [];
+    }
+
+    const mergedRooms = new Map();
+    for (const room of [...(publicRooms || []), ...joinedRooms]) {
+      mergedRooms.set(room.id, room);
+    }
+
     // Fetch member counts for each room
-    const roomsWithCounts = await Promise.all((publicRooms || []).map(async (room) => {
+    const roomsWithCounts = await Promise.all(Array.from(mergedRooms.values()).map(async (room) => {
       const { count } = await supabase
         .from('room_members')
         .select('id', { count: 'exact', head: true })
         .eq('room_id', room.id);
+      const membership = myMembershipByRoom.get(room.id);
       return {
         ...toApi(room),
         owner: room.owner ? { _id: room.owner.id, name: room.owner.name, avatar: room.owner.avatar_url || '' } : null,
         member_count: count || 0,
-        is_member: myRoomIds.includes(room.id)
+        is_member: Boolean(membership),
+        my_role: membership?.role || null
       };
     }));
 
+    roomsWithCounts.sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0));
     res.json(roomsWithCounts);
   } catch (error) {
     console.error('[Rooms /list]', error);
@@ -282,9 +308,7 @@ router.post('/join', protect, async (req, res) => {
       return res.status(404).json({ error: 'Ma moi khong hop le' });
     }
 
-    if (!room.is_public) {
-      return res.status(403).json({ error: 'Phong nay khong cong khai' });
-    }
+    // Anyone with the correct invite code can join, even if the room is not public.
 
     // Check existing membership
     const { data: existing } = await supabase

@@ -4,6 +4,8 @@ import { sendMessage, sendTyping } from '../utils/socket';
 export default function ChatArea({ roomId, channel, user, messages, setMessages, socket }) {
   const [input, setInput] = useState('');
   const [typingUsers, setTypingUsers] = useState({});
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -45,11 +47,22 @@ export default function ChatArea({ roomId, channel, user, messages, setMessages,
     };
   }, [socket, channel, user, setMessages]);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    sendMessage(roomId, channel?.id || channel?._id, input.trim());
-    setInput('');
+    const text = input.trim();
+    if (!text || isSending) return;
+
+    setSendError('');
+    setIsSending(true);
+
+    try {
+      await sendMessage(roomId, channel?.id || channel?._id, text);
+      setInput('');
+    } catch (err) {
+      setSendError(err.message || 'Không gửi được tin nhắn');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -113,6 +126,7 @@ export default function ChatArea({ roomId, channel, user, messages, setMessages,
       </div>
 
       <form className="chat-input" onSubmit={handleSend}>
+        {sendError && <div className="chat-send-error">{sendError}</div>}
         <input
           type="text"
           placeholder={`Nhắn tin trong #${channel?.name || 'channel'}...`}
@@ -120,7 +134,9 @@ export default function ChatArea({ roomId, channel, user, messages, setMessages,
           onChange={handleInputChange}
           autoFocus
         />
-        <button type="submit" disabled={!input.trim()}>Gửi</button>
+        <button type="submit" disabled={!input.trim() || isSending}>
+          {isSending ? 'Đang gửi...' : 'Gửi'}
+        </button>
       </form>
     </div>
   );
