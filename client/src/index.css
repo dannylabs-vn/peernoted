@@ -5,41 +5,156 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Colors - Modern Slate & Indigo Palette */
+  /* ═══════════════════════════════════════════════════════════════
+     PEERNOTED DESIGN TOKENS — Single source of truth for theme
+     Mọi component PHẢI dùng var() thay vì hex/rgba để đảm bảo đồng bộ
+     light/dark mode và brand color.
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* ── Brand: Primary blue (CTA, links, accents) ── */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
-  --primary-light: rgba(37, 99, 235, 0.07);
-  
+  --primary-active: #1e40af;
+  --primary-light: rgba(37, 99, 235, 0.08);
+  --primary-glow: rgba(37, 99, 235, 0.18);
+
+  /* ── Accent: Indigo (gradients, decorative) ── */
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-light: rgba(99, 102, 241, 0.08);
+  --accent-glow: rgba(99, 102, 241, 0.25);
+  --accent-gradient: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  --accent-secondary: #7c3aed;  /* Purple for podcast / community elements */
+
+  /* ── Semantic colors ── */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.1);
+  --success-bg: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.1);
+  --warning-bg: #fef3c7;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: rgba(239, 68, 68, 0.1);
+  --danger-bg: #fef2f2;
+  --info: #06b6d4;
+  --info-light: rgba(6, 182, 212, 0.1);
+
+  /* ── Surfaces & backgrounds ── */
   --bg-main: #f8fafc;
   --bg-surface: #ffffff;
   --bg-elevated: #ffffff;
-  
+  --bg-secondary: #f1f5f9;
+  --bg-tertiary: #e2e8f0;
+  --bg-overlay: rgba(15, 23, 42, 0.6);
+
+  /* ── Typography colors ── */
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
-  
+  --text-inverse: #ffffff;
+  --text-link: var(--primary);
+
+  /* ── Borders ── */
+  --border: #e2e8f0;
   --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-strong: #cbd5e1;
   --border-accent: rgba(37, 99, 235, 0.15);
-  
-  /* Gradients */
+  --border-focus: var(--primary);
+
+  /* ── Gradients ── */
   --gradient-ai: linear-gradient(135deg, #2563eb 0%, #6366f1 100%);
+  --gradient-podcast: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
   --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%);
-  
-  /* Radius & Shadows */
+  --gradient-warm: linear-gradient(135deg, #f87171 0%, #fbbf24 100%);
+
+  /* ── Typography scale ── */
+  --font-sans: 'Inter', 'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace;
+  --font-display: 'Inter', 'Be Vietnam Pro', sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.85rem;
+  --text-base: 0.95rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.4rem;
+  --text-2xl: 1.8rem;
+  --text-3xl: 2.4rem;
+
+  /* ── Spacing scale (4px grid) ── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* ── Radius ── */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
+  --radius-2xl: 28px;
   --radius-full: 9999px;
-  
+
+  /* ── Shadows ── */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.06), 0 0 40px rgba(0, 0, 0, 0.02);
-  
-  /* Animations */
+  --shadow-glow: 0 0 30px var(--primary-glow);
+
+  /* ── Motion ── */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --hover-transition: all 0.25s var(--ease);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --transition-fast: 0.15s var(--ease);
+  --transition-base: 0.25s var(--ease);
+  --transition-slow: 0.4s var(--ease);
+  --hover-transition: var(--transition-base);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — Override tokens, components tự động đổi theo.
+   App.css đã có .dark-mode utility class, ta map vào đây.
+   ═══════════════════════════════════════════════════════════════ */
+.dark-mode,
+[data-theme="dark"] {
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-light: rgba(59, 130, 246, 0.15);
+  --primary-glow: rgba(59, 130, 246, 0.3);
+
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-light: rgba(129, 140, 248, 0.15);
+
+  --bg-main: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-elevated: #334155;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-inverse: #0f172a;
+
+  --border: #334155;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: #475569;
+
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --danger-bg: rgba(239, 68, 68, 0.15);
+
+  --gradient-glass: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.6) 100%);
+
+  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(59, 130, 246, 0.08);
 }
 
 * {

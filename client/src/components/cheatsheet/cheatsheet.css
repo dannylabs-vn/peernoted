@@ -29,7 +29,7 @@
 }
 .cs-tpl-thumb:hover { border-color: #94a3b8; }
 .cs-tpl-thumb.active {
-  border-color: #6366f1;
+  border-color: var(--accent);
   background: #eef2ff;
 }
 .cs-tpl-icon { font-size: 22px; }
@@ -87,7 +87,7 @@
 }
 .tpl-academic-blue .tpl-blocks { padding: 10px 12px; font-size: 13px; line-height: 1.5; }
 .tpl-academic-blue .cs-block { margin-bottom: 10px; }
-.tpl-academic-blue .cs-formula { background: #f1f5f9; padding: 8px; border-radius: 4px; text-align: center; }
+.tpl-academic-blue .cs-formula { background: var(--bg-secondary); padding: 8px; border-radius: 4px; text-align: center; }
 .tpl-academic-blue .cs-formula-caption { font-size: 11px; color: #475569; margin-bottom: 4px; font-style: italic; }
 .tpl-academic-blue .cs-formula-body { font-size: 14px; }
 .tpl-academic-blue .cs-term { font-weight: 700; color: #1e3a8a; }
@@ -95,14 +95,14 @@
 .tpl-academic-blue .cs-list-title { font-weight: 600; margin-bottom: 4px; }
 .tpl-academic-blue .cs-example { background: #fef9c3; padding: 8px; border-radius: 4px; border-left: 3px solid #ca8a04; }
 .tpl-academic-blue .cs-example-caption { font-size: 11px; color: #854d0e; font-weight: 600; margin-bottom: 4px; }
-.tpl-academic-blue .cs-note { background: #ecfdf5; padding: 8px; border-radius: 4px; border-left: 3px solid #10b981; display: flex; gap: 6px; align-items: flex-start; }
-.tpl-academic-blue .cs-note-icon { color: #10b981; }
+.tpl-academic-blue .cs-note { background: var(--success-bg); padding: 8px; border-radius: 4px; border-left: 3px solid var(--success); display: flex; gap: 6px; align-items: flex-start; }
+.tpl-academic-blue .cs-note-icon { color: var(--success); }
 
 /* ============================================================
    TEMPLATE 2 — Modern Card
    ============================================================ */
 .tpl-modern-card {
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  background: linear-gradient(135deg, var(--bg-main) 0%, #eef2ff 100%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   padding: 24px;
 }
@@ -110,7 +110,7 @@
   margin: 0 0 20px;
   font-size: 32px;
   font-weight: 800;
-  background: linear-gradient(90deg, #6366f1, #ec4899);
+  background: linear-gradient(90deg, var(--accent), #ec4899);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -126,7 +126,7 @@
   border-radius: 14px;
   padding: 16px;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-  border-top: 4px solid var(--mc-accent, #6366f1);
+  border-top: 4px solid var(--mc-accent, var(--accent));
 }
 .tpl-modern-card .mc-section-heading {
   margin: 0 0 12px;
@@ -135,7 +135,7 @@
 }
 .tpl-modern-card .mc-block { margin-bottom: 10px; font-size: 13px; line-height: 1.55; }
 .tpl-modern-card .mc-formula {
-  background: #f8fafc;
+  background: var(--bg-main);
   border-left: 3px solid;
   padding: 10px;
   border-radius: 6px;
@@ -156,7 +156,7 @@
 .tpl-modern-card .mc-list ul { list-style: none; padding: 0; margin: 4px 0 0; }
 .tpl-modern-card .mc-list li { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0; }
 .tpl-modern-card .mc-bullet { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
-.tpl-modern-card .mc-example { background: #fef3c7; padding: 10px; border-radius: 6px; }
+.tpl-modern-card .mc-example { background: var(--warning-bg); padding: 10px; border-radius: 6px; }
 .tpl-modern-card .mc-note { padding: 10px; border-left: 3px solid; border-radius: 4px; display: flex; gap: 8px; }
 
 /* ============================================================
@@ -212,7 +212,7 @@
 .tpl-sketch-notebook .sk-list li { display: flex; gap: 6px; align-items: flex-start; margin: 6px 0; }
 .tpl-sketch-notebook .sk-bullet { color: #b45309; font-size: 22px; line-height: 1; }
 .tpl-sketch-notebook .sk-example {
-  background: #fef3c7;
+  background: var(--warning-bg);
   padding: 10px;
   border-radius: 4px;
   border-left: 4px solid #ca8a04;
@@ -220,7 +220,7 @@
 .tpl-sketch-notebook .sk-note {
   background: #fef9c3;
   padding: 10px;
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid var(--warning);
   border-radius: 4px;
   display: flex;
   gap: 8px;
@@ -320,8 +320,8 @@
   font-weight: 500;
 }
 .cs-modal-tabs button.active {
-  color: #6366f1;
-  border-bottom-color: #6366f1;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 .cs-modal-body { padding: 20px 24px 24px; }
 .cs-modal-hint { color: #475569; font-size: 14px; margin: 0 0 14px; }
@@ -332,15 +332,15 @@
   text-align: center;
   cursor: pointer;
   transition: all .15s;
-  background: #f8fafc;
+  background: var(--bg-main);
 }
-.cs-dropzone.active { border-color: #6366f1; background: #eef2ff; }
+.cs-dropzone.active { border-color: var(--accent); background: #eef2ff; }
 .cs-dropzone-icon { font-size: 36px; margin-bottom: 8px; }
 .cs-dropzone-empty p { margin: 4px 0; color: #475569; }
 .cs-dropzone-empty small { color: #94a3b8; }
 .cs-preview { max-width: 100%; max-height: 200px; border-radius: 8px; }
 .cs-result {
-  background: #f1f5f9;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 14px;
   margin-top: 14px;
@@ -353,8 +353,8 @@
 }
 .cs-result-label { font-weight: 600; color: #475569; min-width: 100px; }
 .cs-modal-error {
-  background: #fef2f2;
-  border-left: 4px solid #ef4444;
+  background: var(--danger-bg);
+  border-left: 4px solid var(--danger);
   padding: 10px 12px;
   border-radius: 4px;
   margin-top: 12px;
@@ -369,7 +369,7 @@
 }
 .cs-font-list { display: flex; flex-direction: column; gap: 8px; }
 .cs-font-item {
-  background: #f8fafc;
+  background: var(--bg-main);
   border: 2px solid #e2e8f0;
   border-radius: 10px;
   padding: 12px 14px;
@@ -382,7 +382,7 @@
   align-items: center;
 }
 .cs-font-item:hover { border-color: #94a3b8; }
-.cs-font-item.active { border-color: #6366f1; background: #eef2ff; }
+.cs-font-item.active { border-color: var(--accent); background: #eef2ff; }
 .cs-font-name { font-size: 14px; color: #334155; font-weight: 600; font-family: -apple-system, sans-serif !important; }
 .cs-font-sample { font-size: 22px; color: #1e293b; }
 .cs-font-desc { grid-column: 1 / -1; font-size: 12px; color: #64748b; font-family: -apple-system, sans-serif !important; }
