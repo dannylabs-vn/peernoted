@@ -32,11 +32,15 @@ export default function RoomView({ room: initialRoom, user, onBack }) {
   const fetchRoomDetail = useCallback(async () => {
     try {
       const detail = await api.getRoomDetail(roomId);
-      if (detail.channels) setChannels(detail.channels);
-      if (detail.members) setMembers(detail.members);
-      if (!activeChannel && detail.channels?.length > 0) {
-        setActiveChannel(detail.channels[0]);
+      if (detail.channels) {
+        setChannels(detail.channels);
+        setActiveChannel(prev => {
+          const currentId = prev?._id || prev?.id;
+          const currentStillExists = detail.channels.some(ch => (ch._id || ch.id) === currentId);
+          return currentStillExists ? prev : (detail.channels[0] || null);
+        });
       }
+      if (detail.members) setMembers(detail.members);
       setRoom(prev => ({ ...prev, ...detail }));
     } catch (err) {
       console.error('Failed to fetch room detail:', err);
@@ -55,10 +59,12 @@ export default function RoomView({ room: initialRoom, user, onBack }) {
     const s = connectSocket(token);
     setSocket(s);
 
+    const handleConnect = () => joinRoom(roomId);
+
     if (s.connected) {
-      joinRoom(roomId);
+      handleConnect();
     } else {
-      s.on('connect', () => joinRoom(roomId));
+      s.on('connect', handleConnect);
     }
 
     // Listen for room events
@@ -82,9 +88,10 @@ export default function RoomView({ room: initialRoom, user, onBack }) {
 
     return () => {
       leaveRoom(roomId);
-      s.off('user-online');
-      s.off('user-offline');
-      s.off('room-online-users');
+      s.off('connect', handleConnect);
+      s.off('user-online', handleOnline);
+      s.off('user-offline', handleOffline);
+      s.off('room-online-users', handleOnlineUsers);
     };
   }, [roomId]);
 

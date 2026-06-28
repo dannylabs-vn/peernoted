@@ -9,9 +9,13 @@ export function getSocket() {
 export function connectSocket(token) {
   if (socket?.connected) return socket;
 
-  const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const apiUrl = import.meta.env.VITE_API_URL || '';
+  const serverUrl = apiUrl
+    ? apiUrl.replace(/\/api\/?$/, '').replace(/\/$/, '')
+    : undefined;
   
   socket = io(serverUrl, {
+    path: '/socket.io',
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnection: true,
@@ -54,9 +58,25 @@ export function leaveRoom(roomId) {
 }
 
 export function sendMessage(roomId, channelId, content) {
-  if (socket?.connected) {
-    socket.emit('send-message', { roomId, channelId, content });
+  if (!socket?.connected) {
+    return Promise.reject(new Error('WebSocket chưa kết nối'));
   }
+
+  return new Promise((resolve, reject) => {
+    socket.timeout(5000).emit('send-message', { roomId, channelId, content }, (err, response) => {
+      if (err) {
+        reject(new Error('Gửi tin nhắn quá thời gian chờ'));
+        return;
+      }
+
+      if (!response?.ok) {
+        reject(new Error(response?.error || 'Không gửi được tin nhắn'));
+        return;
+      }
+
+      resolve(response.message);
+    });
+  });
 }
 
 export function sendTyping(roomId, channelId, isTyping) {
