@@ -141,7 +141,7 @@
   border: 1px solid rgba(0, 0, 0, 0.1);
   font-size: 0.8rem;
   outline: none;
-  background: #ffffff;
+  background: var(--bg-surface);
   transition: border-color 0.2s;
 }
 

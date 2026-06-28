@@ -148,7 +148,7 @@
 }
 
 .room-modal {
-  background: #1e1e2e;
+  background: var(--bg-elevated);
   border-radius: 16px;
   padding: 32px;
   width: 420px;
@@ -176,7 +176,7 @@
 
 .room-modal input:focus {
   outline: none;
-  border-color: #6c5ce7;
+  border-color: var(--accent);
 }
 
 .room-checkbox {

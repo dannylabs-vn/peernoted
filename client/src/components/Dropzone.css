@@ -13,7 +13,7 @@
 
 .dropzone:hover {
   border-color: var(--primary);
-  background: #fcfcfd;
+  background: var(--bg-surface);
   transform: translateY(-4px);
   box-shadow: var(--shadow-premium);
 }
