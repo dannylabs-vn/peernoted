@@ -122,6 +122,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
       }
 
       // Find folder by case-insensitive name
+      classification.folder_name = classification.folder_name || 'Chưa phân loại';
       const targetName = classification.folder_name.trim();
       const { data: existing } = await supabase
         .from('folders').select('*').ilike('name', targetName).maybeSingle();
@@ -138,8 +139,8 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
         folder = existing;
         classification.folder_name = folder.name;
         classification.subject = folder.subject;
-        classification.chapter = folder.chapter;
-        classification.grade = folder.grade;
+        classification.chapter = folder.chapter || '';
+        classification.grade = folder.grade || '';
       } else if (existing && !subjectsMatch) {
         // LLM tried to merge into a folder with a different subject.
         // Discard LLM's bad folder_name and synthesize a clean one from
@@ -201,8 +202,8 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
           file_type: ext,
           file_size: file.size,
           extracted_text: extractedText,
-          ai_summary: classification.summary,
-          ai_tags: classification.tags
+          ai_summary: classification.summary || '',
+          ai_tags: classification.tags || ['cần-phân-loại']
         })
         .select('*')
         .single();
