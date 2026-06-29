@@ -1,4 +1,4 @@
-.dropzone {
+﻿.dropzone {
   margin: 60px 0;
   padding: 60px 40px;
   border: 2px dashed var(--border-subtle);
@@ -6,7 +6,7 @@
   text-align: center;
   cursor: pointer;
   transition: var(--hover-transition);
-  background: white;
+  background: var(--bg-surface);
   position: relative;
   overflow: hidden;
 }
@@ -94,3 +94,4 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+

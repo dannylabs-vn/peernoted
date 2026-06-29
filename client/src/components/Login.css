@@ -1,4 +1,4 @@
-.login-page {
+﻿.login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -18,7 +18,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: white;
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   padding: 10px 20px;
   border-radius: var(--radius-full);
@@ -48,7 +48,7 @@
   animation: slideUp 0.6s var(--ease) both;
 }
 
-/* ── Left Side: Brand ── */
+/* â”€â”€ Left Side: Brand â”€â”€ */
 .login-brand {
   flex: 1;
   background: var(--gradient-ai);
@@ -80,7 +80,7 @@
 .logo-icon {
   width: 40px;
   height: 40px;
-  background: white;
+  background: var(--bg-surface);
   color: var(--primary);
   border-radius: 10px;
   display: flex;
@@ -142,14 +142,14 @@
   left: 40px;
 }
 
-/* ── Right Side: Form ── */
+/* â”€â”€ Right Side: Form â”€â”€ */
 .login-form-wrapper {
   flex: 1.2;
   padding: 60px 80px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: white;
+  background: var(--bg-surface);
 }
 
 .login-form-header {
@@ -320,7 +320,7 @@
   gap: 12px;
   width: 100%;
   padding: 12px;
-  background: white;
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   font-size: 0.95rem;
@@ -396,3 +396,4 @@
     gap: 20px;
   }
 }
+

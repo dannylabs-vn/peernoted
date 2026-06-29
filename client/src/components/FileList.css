@@ -1,4 +1,4 @@
-.file-list {
+﻿.file-list {
   margin-top: 40px;
 }
 
@@ -15,7 +15,7 @@
   align-items: center;
 }
 
-/* ── Checkbox column ── */
+/* â”€â”€ Checkbox column â”€â”€ */
 .file-col-check {
   display: flex;
   align-items: center;
@@ -31,7 +31,7 @@
   transition: all 0.15s ease;
 }
 
-/* ── File row ── */
+/* â”€â”€ File row â”€â”€ */
 .file-row {
   display: grid;
   grid-template-columns: 40px 3fr 2.5fr 120px 120px 60px;
@@ -40,7 +40,7 @@
   margin: 8px 0;
   border-radius: var(--radius-md);
   transition: var(--hover-transition);
-  background: white;
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   cursor: default;
 }
@@ -60,7 +60,7 @@
   background: rgba(37, 99, 235, 0.07);
 }
 
-/* ── Batch action bar ── */
+/* â”€â”€ Batch action bar â”€â”€ */
 .file-batch-bar {
   display: flex;
   align-items: center;
@@ -126,7 +126,7 @@
   color: var(--text-primary);
 }
 
-/* ── Content columns ── */
+/* â”€â”€ Content columns â”€â”€ */
 .file-col-name {
   display: flex;
   align-items: center;
@@ -190,7 +190,7 @@
 .file-empty {
   text-align: center;
   padding: 80px 40px;
-  background: white;
+  background: var(--bg-surface);
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-subtle);
 }
@@ -216,7 +216,7 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
@@ -232,7 +232,7 @@
   color: var(--danger-hover);
 }
 
-/* ── Animations ── */
+/* â”€â”€ Animations â”€â”€ */
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -243,3 +243,4 @@
     transform: translateY(0);
   }
 }
+
