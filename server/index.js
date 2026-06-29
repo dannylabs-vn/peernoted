@@ -62,6 +62,12 @@ const io = new Server(server, {
 });
 setupSocket(io);
 
+// Global Error Handler for uncaught middleware errors (e.g. Multer)
+app.use((err, req, res, next) => {
+  console.error('[Global Error Handler]:', err);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
+});
+
 const startServer = async () => {
   try {
     await healthcheck();
