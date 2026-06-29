@@ -190,7 +190,22 @@ YÊU CẦU CẤU TRÚC:
   * Đoạn có "Mẹo" / "Lưu ý" / "Ghi nhớ" → "note"
   * Đoạn còn lại → "note"
 - LUÔN điền đủ 5 field type/content/term/items/caption (set null cho field không dùng).
-- Giữ nguyên ngôn ngữ tiếng Việt.`
+- Giữ nguyên ngôn ngữ tiếng Việt.`,
+
+  // Generate Quiz Questions
+  generateQuiz: (allTexts, folderName = '') => `Bạn là một giáo sư đại học đang soạn đề thi trắc nghiệm (Quiz) đánh giá năng lực học sinh về chủ đề: ${folderName || 'Không rõ'}.
+
+Đọc nội dung tài liệu học tập dưới đây và tạo ra 5 câu hỏi trắc nghiệm (Multiple Choice Questions) có độ khó từ cơ bản đến vận dụng cao:
+---
+${allTexts.substring(0, 15000)}
+---
+
+YÊU CẦU:
+1. Tạo 5 câu hỏi. Mỗi câu có 4 đáp án (A, B, C, D) nhưng bạn chỉ cần trả về mảng text của 4 lựa chọn đó trong 'options'.
+2. 'answer' phải là text chính xác TRÙNG KHỚP với một trong các 'options'.
+3. 'explanation' (Lời giải thích / Cứu trợ): Cực kỳ quan trọng. Trích xuất kiến thức cốt lõi để "vá lỗ hổng". Giải thích NGẮN GỌN VÀ DỄ HIỂU TẠI SAO đáp án đó đúng, và tại sao các lỗi sai thường gặp lại sai.
+4. 'topic_tag': Chủ đề kiến thức cụ thể của câu hỏi này (ví dụ: "Đạo hàm", "Giới hạn vô định", "Lý thuyết Mác"). Giữ các tag nhất quán để hệ thống vẽ biểu đồ Radar Chart (mạng nhện) phân tích năng lực. (Chỉ 1-3 từ).
+`
 };
 
 module.exports = PROMPTS;
