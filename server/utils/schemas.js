@@ -136,10 +136,41 @@ const RECOMMENDATIONS_SCHEMA = {
   }
 };
 
+const QUIZ_SCHEMA = {
+  name: 'quiz_generation',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['questions'],
+    properties: {
+      questions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['question', 'options', 'answer', 'explanation', 'topic_tag'],
+          properties: {
+            question: { type: 'string' },
+            options: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            answer: { type: 'string' },
+            explanation: { type: 'string' },
+            topic_tag: { type: 'string' }
+          }
+        }
+      }
+    }
+  }
+};
+
 module.exports = {
   CHEAT_SHEET_SCHEMA,
   CLASSIFY_SCHEMA,
   PODCAST_SCRIPT_SCHEMA,
   HANDWRITING_SCHEMA,
-  RECOMMENDATIONS_SCHEMA
+  RECOMMENDATIONS_SCHEMA,
+  QUIZ_SCHEMA
 };

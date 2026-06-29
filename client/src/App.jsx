@@ -7,6 +7,8 @@ import Login from './components/Login'
 import Forum from './components/Forum'
 import RoomList from './components/RoomList'
 import RoomView from './components/RoomView'
+import QuizView from './components/QuizView'
+import SpacedRepetitionView from './components/SpacedRepetitionView'
 import { getFolders, classifyFiles, getFiles, updateFolder, deleteFolder, deleteFolders, getMe } from './utils/api'
 import './index.css'
 import './App.css'
@@ -687,10 +689,17 @@ function App() {
                   <span className="db-nav-text">Phòng Học</span>
                 </button>
                 <button 
+                  className={`db-nav-item ${activeTab === 'spaced-repetition' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('spaced-repetition'); setSelectedFolder(null); }}
+                >
+                  <span className="db-nav-num">07</span>
+                  <span className="db-nav-text">Ôn tập (Cứu trợ)</span>
+                </button>
+                <button 
                   className={`db-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
                   onClick={() => { setActiveTab('settings'); setSelectedFolder(null); }}
                 >
-                  <span className="db-nav-num">07</span>
+                  <span className="db-nav-num">08</span>
                   <span className="db-nav-text">Cài đặt</span>
                 </button>
               </nav>
@@ -745,6 +754,8 @@ function App() {
                     <>WORKSPACE  /  DIỄN ĐÀN CHIA SẺ</>
                   ) : activeTab === 'rooms' ? (
                     activeRoom ? <>PHÒNG HỌC  /  {activeRoom.name?.toUpperCase()}</> : <>WORKSPACE  /  PHÒNG HỌC</>
+                  ) : activeTab === 'spaced-repetition' ? (
+                    <>WORKSPACE  /  ÔN TẬP (CỨU TRỢ)</>
                   ) : (
                     <>WORKSPACE  /  CÀI ĐẶT</>
                   )}
@@ -771,7 +782,8 @@ function App() {
                     activeTab === 'library' ? 'Thư viện tri thức' :
                     activeTab === 'cheatsheets' ? 'Phao cứu cấp' :
                     activeTab === 'podcasts' ? 'Podcast học tập' :
-                    activeTab === 'forum' ? 'Diễn đàn chia sẻ' : 'Cài đặt'
+                    activeTab === 'forum' ? 'Diễn đàn chia sẻ' : 
+                    activeTab === 'spaced-repetition' ? 'Ôn tập (Cứu trợ)' : 'Cài đặt'
                   )}
                 </h1>
               </div>
@@ -844,6 +856,12 @@ function App() {
                         🎙️ Tạo Podcast
                       </button>
                       <button 
+                        className={`btn-toggle-tool ${view === 'quiz' ? 'active' : ''}`}
+                        onClick={() => setView(view === 'quiz' ? 'files' : 'quiz')}
+                      >
+                        📝 Làm Quiz AI
+                      </button>
+                      <button 
                         className={`btn-toggle-tool ${view === 'cheatsheet' ? 'active' : ''}`}
                         onClick={() => setView(view === 'cheatsheet' ? 'files' : 'cheatsheet')}
                       >
@@ -872,6 +890,9 @@ function App() {
                     )}
                     {view === 'podcast' && (
                       <AudioPlayer folderId={selectedFolder._id} folderName={decodeString(selectedFolder.name)} />
+                    )}
+                    {view === 'quiz' && (
+                      <QuizView folderId={selectedFolder._id} folderName={decodeString(selectedFolder.name)} onBack={() => setView('files')} />
                     )}
                   </div>
                 </div>
@@ -1402,6 +1423,13 @@ function App() {
                         })()}
                         onBack={() => setActiveRoom(null)}
                       />
+                    </div>
+                  )}
+
+                  {activeTab === 'spaced-repetition' && (
+                    /* ── TAB 7: ÔN TẬP CỨU TRỢ ── */
+                    <div className="tab-sr-pane fade-in">
+                      <SpacedRepetitionView />
                     </div>
                   )}
 

@@ -14,6 +14,7 @@ const roomRoutes = require('./routes/rooms');
 const channelRoutes = require('./routes/channels');
 const roomFileRoutes = require('./routes/room-files');
 const peerpointRoutes = require('./routes/peerpoints');
+const quizRoutes = require('./routes/quiz');
 const setupSocket = require('./socket');
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api', channelRoutes);
 app.use('/api', roomFileRoutes);
 app.use('/api', peerpointRoutes);
+app.use('/api/quiz', quizRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

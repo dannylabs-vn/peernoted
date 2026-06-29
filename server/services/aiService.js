@@ -262,6 +262,32 @@ async function analyzeHandwriting(imageBuffer, mimeType) {
   });
 }
 
+async function generateQuiz(allTexts, folderName = '') {
+  try {
+    const out = await chatJSON({
+      model: TEXT_MODEL,
+      schema: SCHEMAS.QUIZ_SCHEMA,
+      messages: [
+        { role: 'system', content: 'Bạn là chuyên gia ra đề thi trắc nghiệm. Trả về theo schema JSON đã định nghĩa.' },
+        { role: 'user', content: PROMPTS.generateQuiz(allTexts, folderName) }
+      ]
+    });
+    return out.questions;
+  } catch (err) {
+    console.warn('[AI Service] generateQuiz API error, using fallback/mock:', err.message);
+    // Return a dummy question if it fails
+    return [
+      {
+        question: "Lỗi tạo câu hỏi: Hệ thống AI hiện đang quá tải hoặc gặp sự cố.",
+        options: ["Thử lại sau", "Báo lỗi", "Bỏ qua", "Đóng"],
+        answer: "Thử lại sau",
+        explanation: "API trả về lỗi hoặc timeout.",
+        topic_tag: "Lỗi hệ thống"
+      }
+    ];
+  }
+}
+
 module.exports = {
   classifyFromText,
   classifyFromImage,
@@ -269,5 +295,6 @@ module.exports = {
   migrateMarkdownToJson,
   generatePodcastScript,
   analyzeHandwriting,
-  generateResourceRecommendations
+  generateResourceRecommendations,
+  generateQuiz
 };
