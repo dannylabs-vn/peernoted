@@ -121,8 +121,15 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
         }
       }
 
+      // Ensure all fields from AI are strings to prevent .trim() or DB type errors
+      classification.folder_name = (typeof classification.folder_name === 'string' ? classification.folder_name : String(classification.folder_name || 'Chưa phân loại'));
+      classification.subject = (typeof classification.subject === 'string' ? classification.subject : String(classification.subject || ''));
+      classification.chapter = (typeof classification.chapter === 'string' ? classification.chapter : String(classification.chapter || ''));
+      classification.grade = (typeof classification.grade === 'string' ? classification.grade : String(classification.grade || ''));
+      classification.summary = (typeof classification.summary === 'string' ? classification.summary : String(classification.summary || ''));
+      classification.tags = Array.isArray(classification.tags) ? classification.tags.map(String) : ['cần-phân-loại'];
+
       // Find folder by case-insensitive name
-      classification.folder_name = classification.folder_name || 'Chưa phân loại';
       const targetName = classification.folder_name.trim();
       const { data: existing } = await supabase
         .from('folders').select('*').ilike('name', targetName).maybeSingle();
@@ -202,8 +209,8 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
           file_type: ext,
           file_size: file.size,
           extracted_text: extractedText,
-          ai_summary: classification.summary || '',
-          ai_tags: classification.tags || ['cần-phân-loại']
+          ai_summary: classification.summary,
+          ai_tags: classification.tags
         })
         .select('*')
         .single();
