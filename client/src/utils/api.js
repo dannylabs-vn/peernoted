@@ -133,4 +133,12 @@ export const unlockReward = (rewardId) =>
 export const suggestRoles = (roomId, memberIds) =>
   API.post('/ai/suggest-role', { roomId, memberIds }).then(r => r.data);
 
+// ===== QUIZ & SPACED REPETITION =====
+export const generateQuiz = (folderId) => API.post(`/quiz/generate/${folderId}`).then(r => r.data);
+export const submitQuiz = (data) => API.post('/quiz/submit', data).then(r => r.data);
+export const getQuizStats = () => API.get('/quiz/stats').then(r => r.data);
+export const getSpacedRepetitionItems = () => API.get('/quiz/spaced-repetition').then(r => r.data);
+export const reviewSpacedRepetition = (id, is_correct) =>
+  API.post(`/quiz/spaced-repetition/review/${id}`, { is_correct }).then(r => r.data);
+
 export default API;

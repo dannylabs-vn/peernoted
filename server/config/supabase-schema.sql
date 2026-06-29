@@ -1,4 +1,4 @@
-﻿-- =====================================================================
+-- =====================================================================
 -- PeerNoted Supabase schema -- run this in the Supabase SQL editor
 -- =====================================================================
 
@@ -146,13 +146,48 @@ insert into public.peer_rewards (name, description, cost, reward_type) values
   ('VIP Role', 'Role dac biet trong room', 1000, 'role')
 on conflict do nothing;
 
+-- =====================================================================
+-- QUIZ & SPACED REPETITION TABLES
+-- =====================================================================
+
+-- ---------- quiz_attempts ----------
+create table if not exists public.quiz_attempts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  folder_id uuid not null references public.folders(id) on delete cascade,
+  question_text text not null,
+  options jsonb not null,
+  correct_answer text not null,
+  user_answer text not null,
+  is_correct boolean not null,
+  topic_tag text not null default '',
+  explanation text not null default '',
+  created_at timestamptz not null default now()
+);
+create index if not exists quiz_attempts_user_idx on public.quiz_attempts (user_id);
+create index if not exists quiz_attempts_folder_idx on public.quiz_attempts (folder_id);
+
+-- ---------- spaced_repetition_items ----------
+create table if not exists public.spaced_repetition_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  quiz_attempt_id uuid not null references public.quiz_attempts(id) on delete cascade,
+  next_review_at timestamptz not null,
+  interval_hours int not null default 24,
+  status text not null default 'pending' check (status in ('pending', 'mastered')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists sr_items_user_idx on public.spaced_repetition_items (user_id);
+create index if not exists sr_items_next_review_idx on public.spaced_repetition_items (next_review_at);
 -- ---------- updated_at trigger ----------
 create or replace function public.touch_updated_at()
-returns trigger language plpgsql as 
+returns trigger language plpgsql as $$
 begin
   new.updated_at = now();
   return new;
-end ;
+end;
+$$;
 
 drop trigger if exists users_touch on public.users;
 create trigger users_touch
@@ -174,6 +209,11 @@ create trigger rooms_touch
   before update on public.rooms
   for each row execute function public.touch_updated_at();
 
+drop trigger if exists sr_items_touch on public.spaced_repetition_items;
+create trigger sr_items_touch
+  before update on public.spaced_repetition_items
+  for each row execute function public.touch_updated_at();
+
 -- ---------- Row Level Security ----------
 alter table public.users   disable row level security;
 alter table public.folders disable row level security;
@@ -184,3 +224,6 @@ alter table public.room_channels disable row level security;
 alter table public.room_files disable row level security;
 alter table public.peer_rewards disable row level security;
 alter table public.user_unlocked_rewards disable row level security;
+alter table public.quiz_attempts disable row level security;
+alter table public.spaced_repetition_items disable row level security;
+
