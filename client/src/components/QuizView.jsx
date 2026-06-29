@@ -126,7 +126,7 @@ export default function QuizView({ folderId, folderName, onBack }) {
               {currentQuestion.options.map((opt, i) => (
                 <button
                   key={i}
-                  className={\`quiz-option-btn \${answers[currentIdx] === opt ? 'selected' : ''}\`}
+                  className={`quiz-option-btn ${answers[currentIdx] === opt ? 'selected' : ''}`}
                   onClick={() => handleSelectOption(opt)}
                 >
                   <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
@@ -215,7 +215,7 @@ export default function QuizView({ folderId, folderName, onBack }) {
               const userAns = answers[idx];
               const isCorrect = userAns === q.answer;
               return (
-                <div key={idx} className={\`review-card \${isCorrect ? 'correct' : 'wrong'}\`}>
+                <div key={idx} className={`review-card ${isCorrect ? 'correct' : 'wrong'}`}>
                   <p className="review-q"><strong>Câu {idx + 1}:</strong> {q.question}</p>
                   <p className="review-a">Đáp án của bạn: <span className={isCorrect ? 'text-success' : 'text-danger'}>{userAns}</span></p>
                   {!isCorrect && <p className="review-ca">Đáp án đúng: <span className="text-success">{q.answer}</span></p>}
