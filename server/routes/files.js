@@ -14,12 +14,31 @@ const upload = multer({
 router.get('/', async (req, res) => {
   try {
     const { folder_id } = req.query;
+    
+    // Ignore invalid folder IDs from old MongoDB data
+    if (folder_id === 'undefined' || folder_id === 'null') {
+      return res.json([]);
+    }
+
     let query = supabase.from('files').select('*').order('created_at', { ascending: false });
-    if (folder_id) query = query.eq('folder_id', folder_id);
+    
+    if (folder_id) {
+      // Basic UUID format check to avoid Postgres 22P02 errors
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(folder_id)) {
+        return res.json([]);
+      }
+      query = query.eq('folder_id', folder_id);
+    }
+    
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('[Files GET] Supabase error:', error);
+      return res.json([]);
+    }
     res.json(toApiList(data));
   } catch (error) {
+    console.error('[Files GET] Exception:', error);
     res.status(500).json({ error: error.message });
   }
 });
