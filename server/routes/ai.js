@@ -551,12 +551,16 @@ router.post('/suggest-role', protect, async (req, res) => {
     // Build prompt
     const promptContent = rolePrompt(room.name, room.topic, filesText, memberNames);
 
-    // Call OpenAI
+    // Call OpenAI or Gemini
     const { default: OpenAI } = await import('openai');
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const isGemini = !!process.env.GEMINI_API_KEY;
+    const openai = new OpenAI({ 
+      apiKey: process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY,
+      baseURL: isGemini ? 'https://generativelanguage.googleapis.com/v1beta/openai/' : undefined
+    });
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: isGemini ? (process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash') : 'gpt-4o-mini',
       messages: [{ role: 'user', content: promptContent }],
       temperature: 0.7,
       max_tokens: 1000
