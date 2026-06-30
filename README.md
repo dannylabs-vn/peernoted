@@ -1,4 +1,4 @@
-﻿# PeerNoted
+# PeerNoted
 
 PeerNoted là một nền tảng quản lý tri thức cá nhân và học tập cộng tác dành cho sinh viên: người dùng kéo–thả tài liệu học tập (PDF / DOCX / hình ảnh), AI tự động phân loại vào thư mục theo môn–chương–lớp, rồi từ nội dung đó sinh ra **cheat sheet (phao cứu cấp)**, **podcast hội thoại 2 MC** và **gợi ý tài nguyên học tập** trên YouTube. Ngoài ra còn có **Phòng Học** (study rooms) với chat thời gian thực, kênh thảo luận, chia sẻ file, và hệ thống **Peer Points** + cửa hàng phần thưởng.
 
@@ -11,6 +11,11 @@ PeerNoted là một nền tảng quản lý tri thức cá nhân và học tập
 - **Phân loại tự động**: GPT-4o-mini phân tích → gắn nhãn môn học, chương, lớp học
 - **Thư viện trực quan**: Xem tất cả tài liệu theo folder, tìm kiếm, lọc, xóa hàng loạt
 - **Trích xuất chữ viết tay**: GPT-4o vision OCR cho ảnh chụp tài liệu
+
+###  Quiz & Ôn tập ngắt quãng (Spaced Repetition)
+- **AI tạo Quiz tự động**: Trích xuất nội dung từ tài liệu trong thư mục để tạo bài kiểm tra trắc nghiệm.
+- **Phân tích điểm yếu**: Biểu đồ mạng nhện (spider chart) đánh giá năng lực theo từng chủ đề.
+- **Hệ thống ôn tập ngắt quãng (Spaced Repetition)**: Tự động đưa các câu trả lời sai vào danh sách "cứu trợ" và nhắc lại theo chu kỳ (24h, 3 ngày, 7 ngày).
 
 ###  Cheat Sheet (Phao cứu cấp)
 - AI tóm tắt nội dung folder thành cheat sheet có cấu trúc (công thức, định nghĩa, danh sách, ví dụ, ghi chú)
@@ -186,7 +191,7 @@ peernoted/
 ### Yêu cầu
 - Node.js ≥ 20
 - Supabase (free) + bucket peernoted-files
-- OpenAI API key
+- OpenAI API key hoặc Gemini API key
 
 ### .env (thư mục gốc)
 ```env
@@ -194,6 +199,7 @@ SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_ANON_KEY=ey...
 JWT_SECRET=thay-bang-chuoi-ngau-nhien
 OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=AIza... (tuỳ chọn nếu dùng Gemini)
 ```
 
 ### Cài đặt
@@ -249,6 +255,15 @@ Tất cả prefix /api.
 | GET | /ai/cheatsheet/:folderId | Lấy cheat sheet |
 | POST | /ai/podcast/:folderId | Tạo podcast |
 | POST | /ai/recommend/:folderId | Gợi ý YouTube |
+
+### Quiz & Spaced Repetition
+| Method | Path | Mô tả |
+|---|---|---|
+| POST | /quiz/generate/:folderId | AI tạo bài kiểm tra |
+| POST | /quiz/submit | Nộp bài & tính điểm |
+| GET | /quiz/stats | Lấy thống kê Spider Chart |
+| GET | /quiz/spaced-repetition | Lấy danh sách ôn tập ngắt quãng |
+| POST | /quiz/spaced-repetition/review/:id | Nộp kết quả ôn tập ngắt quãng |
 
 ### Phòng Học
 | Method | Path | Mô tả |
