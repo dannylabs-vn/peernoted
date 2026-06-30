@@ -73,6 +73,7 @@ function App() {
   const [showLogin, setShowLogin] = useState(false)
   const [activeTab, setActiveTab] = useState('overview') // 'overview' | 'library' | 'cheatsheets' | 'podcasts' | 'forum' | 'rooms' | 'settings'
   const [activeRoom, setActiveRoom] = useState(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Form states for settings
   const [profileName, setProfileName] = useState('Nguyễn An')
@@ -629,8 +630,13 @@ function App() {
            ═══════════════════════════════════════════════════════════════ */
         <div className={`dashboard-container fade-in${darkMode ? ' dark-mode' : ''}`}>
           
+          {/* Overlay for mobile sidebar */}
+          {isSidebarOpen && (
+            <div className="db-sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>
+          )}
+
           {/* Left persistent sidebar */}
-          <aside className="db-sidebar">
+          <aside className={`db-sidebar ${isSidebarOpen ? 'mobile-open' : ''}`}>
             {/* Top Brand Logo */}
             <div className="db-logo-wrapper" onClick={() => setShowDashboard(false)} title="Quay lại trang chủ">
               <div className="db-logo">
@@ -648,35 +654,35 @@ function App() {
               <nav className="db-nav-list">
                 <button 
                   className={`db-nav-item ${activeTab === 'overview' && !selectedFolder ? 'active' : ''}`}
-                  onClick={() => { setActiveTab('overview'); setSelectedFolder(null); }}
+                  onClick={() => { setActiveTab('overview'); setSelectedFolder(null); setIsSidebarOpen(false); }}
                 >
                   <span className="db-nav-num">01</span>
                   <span className="db-nav-text">Tổng quan</span>
                 </button>
                 <button 
                   className={`db-nav-item ${(activeTab === 'library' || (selectedFolder && activeTab === 'library')) ? 'active' : ''}`}
-                  onClick={() => { setActiveTab('library'); setSelectedFolder(null); }}
+                  onClick={() => { setActiveTab('library'); setSelectedFolder(null); setIsSidebarOpen(false); }}
                 >
                   <span className="db-nav-num">02</span>
                   <span className="db-nav-text">Thư viện tri thức</span>
                 </button>
                 <button 
                   className={`db-nav-item ${activeTab === 'cheatsheets' ? 'active' : ''}`}
-                  onClick={() => { setActiveTab('cheatsheets'); setSelectedFolder(null); }}
+                  onClick={() => { setActiveTab('cheatsheets'); setSelectedFolder(null); setIsSidebarOpen(false); }}
                 >
                   <span className="db-nav-num">03</span>
                   <span className="db-nav-text">Phao cứu cấp</span>
                 </button>
                 <button 
                   className={`db-nav-item ${activeTab === 'podcasts' ? 'active' : ''}`}
-                  onClick={() => { setActiveTab('podcasts'); setSelectedFolder(null); }}
+                  onClick={() => { setActiveTab('podcasts'); setSelectedFolder(null); setIsSidebarOpen(false); }}
                 >
                   <span className="db-nav-num">04</span>
                   <span className="db-nav-text">Podcast học tập</span>
                 </button>
                 <button 
                   className={`db-nav-item ${activeTab === 'forum' ? 'active' : ''}`}
-                  onClick={() => { setActiveTab('forum'); setSelectedFolder(null); }}
+                  onClick={() => { setActiveTab('forum'); setSelectedFolder(null); setIsSidebarOpen(false); }}
                 >
                   <span className="db-nav-num">05</span>
                   <span className="db-nav-text">Diễn đàn chia sẻ</span>
@@ -690,14 +696,14 @@ function App() {
                 </button>
                 <button 
                   className={`db-nav-item ${activeTab === 'spaced-repetition' ? 'active' : ''}`}
-                  onClick={() => { setActiveTab('spaced-repetition'); setSelectedFolder(null); }}
+                  onClick={() => { setActiveTab('spaced-repetition'); setSelectedFolder(null); setIsSidebarOpen(false); }}
                 >
                   <span className="db-nav-num">07</span>
                   <span className="db-nav-text">Ôn tập (Cứu trợ)</span>
                 </button>
                 <button 
                   className={`db-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-                  onClick={() => { setActiveTab('settings'); setSelectedFolder(null); }}
+                  onClick={() => { setActiveTab('settings'); setSelectedFolder(null); setIsSidebarOpen(false); }}
                 >
                   <span className="db-nav-num">08</span>
                   <span className="db-nav-text">Cài đặt</span>
@@ -739,6 +745,14 @@ function App() {
             {/* Main Header bar */}
             <header className="db-pane-header">
               <div className="db-breadcrumb-group">
+                {/* Hamburger menu for mobile */}
+                <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)} title="Mở menu">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                  </svg>
+                </button>
                 <div className="db-breadcrumb">
                   {selectedFolder ? (
                     <>WORKSPACE  /  THƯ VIỆN  /  <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{decodeString(selectedFolder.name).toUpperCase()}</span></>

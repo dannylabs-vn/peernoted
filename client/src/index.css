@@ -939,3 +939,40 @@ p {
   background: rgba(49, 51, 56, 0.8) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT & MOBILE OPTIMIZATIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Tablet (Max 1024px) */
+@media (max-width: 1024px) {
+  :root {
+    --text-3xl: 2rem;
+    --text-2xl: 1.5rem;
+    --text-xl: 1.25rem;
+    --space-3xl: 48px;
+    --space-2xl: 32px;
+  }
+}
+
+/* Mobile (Max 768px) */
+@media (max-width: 768px) {
+  :root {
+    --text-3xl: 1.75rem;
+    --text-2xl: 1.35rem;
+    --text-xl: 1.15rem;
+    --space-3xl: 32px;
+    --space-2xl: 24px;
+    --space-xl: 16px;
+  }
+  
+  /* Hide scrollbars on mobile for cleaner look */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent; 
+  }
+  
+  .hide-on-mobile {
+    display: none !important;
+  }
+}

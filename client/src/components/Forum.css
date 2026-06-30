@@ -1038,3 +1038,37 @@
   gap: 12px;
   margin-top: 8px;
 }
+
+/* ---------------------------------------------------------------
+   RESPONSIVE (FORUM)
+   --------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .forum-layout {
+    grid-template-columns: 240px 1fr; /* narrower sidebar */
+  }
+}
+
+@media (max-width: 768px) {
+  .forum-layout {
+    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .forum-sidebar {
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    height: auto;
+  }
+
+  .forum-main {
+    padding: 16px;
+  }
+  
+  .forum-feed {
+    grid-template-columns: 1fr;
+  }
+}
+
