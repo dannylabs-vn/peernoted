@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as api from '../utils/api';
+import { encryptFile, decryptFile } from '../utils/crypto';
 
-export default function RoomFileManager({ roomId, userId, canManage }) {
+export default function RoomFileManager({ roomId, userId, canManage, inviteCode }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [libraryFolders, setLibraryFolders] = useState([]);
@@ -42,9 +43,11 @@ export default function RoomFileManager({ roomId, userId, canManage }) {
   }, [roomId]);
 
   const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
     try {
+      // E2EE Encrypt
+      file = await encryptFile(file, inviteCode);
       await api.uploadRoomFile(roomId, file);
       fetchFiles();
     } catch (err) {
@@ -71,6 +74,30 @@ export default function RoomFileManager({ roomId, userId, canManage }) {
       setFiles(prev => prev.filter(f => (f._id || f.id) !== fileId));
     } catch (err) {
       alert(err.response?.data?.error || err.message);
+    }
+  };
+
+  const handleDownload = async (file) => {
+    try {
+      const response = await fetch(file.storage_url);
+      if (!response.ok) throw new Error('Không thể tải file từ máy chủ');
+      const encryptedBlob = await response.blob();
+      
+      // E2EE Decrypt
+      // We use application/octet-stream as a fallback if file_type is missing
+      const mimeType = file.file_type || 'application/octet-stream';
+      const decryptedBlob = await decryptFile(encryptedBlob, inviteCode, mimeType);
+      
+      const url = window.URL.createObjectURL(decryptedBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.original_name || 'downloaded_file';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      alert('Không thể tải hoặc giải mã file: ' + err.message);
     }
   };
 
@@ -125,7 +152,7 @@ export default function RoomFileManager({ roomId, userId, canManage }) {
                   {(f.uploader?.name || 'Unknown')} • {f.source_type === 'library' ? '📚 Library' : '📤 Upload'}
                 </span>
                 <div className="file-item-actions">
-                  <a href={f.storage_url} target="_blank" rel="noreferrer" className="btn-download">Tải</a>
+                  <button className="btn-download" onClick={() => handleDownload(f)} style={{ border: 'none', background: '#3b82f6', color: 'white', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Tải (Giải mã)</button>
                   {(canManage || f.uploaded_by === userId) && (
                     <button className="btn-delete" onClick={() => handleDelete(f._id || f.id)}>Xóa</button>
                   )}

@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
       return res.json([]);
     }
 
-    let query = supabase.from('files').select('*').order('created_at', { ascending: false });
+    let query = (req.supabase || supabase).from('files').select('*').order('created_at', { ascending: false });
     
     if (folder_id) {
       // Basic UUID format check to avoid Postgres 22P02 errors
@@ -49,8 +49,7 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
     const { folder_id } = req.body;
     if (!folder_id) return res.status(400).json({ error: 'folder_id is required' });
 
-    const { data: folder, error: fErr } = await supabase
-      .from('folders').select('id').eq('id', folder_id).maybeSingle();
+    const { data: folder, error: fErr } = await (req.supabase || supabase).from('folders').select('id').eq('id', folder_id).maybeSingle();
     if (fErr) throw fErr;
     if (!folder) return res.status(404).json({ error: 'Folder not found' });
 
@@ -61,8 +60,7 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
       const ext = file.originalname.split('.').pop().toLowerCase();
       const originalNameUtf8 = fixLatin1Name(file.originalname);
 
-      const { data, error } = await supabase
-        .from('files')
+      const { data, error } = await (req.supabase || supabase).from('files')
         .insert({
           folder_id,
           original_name: originalNameUtf8,
@@ -85,8 +83,7 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
 // DELETE file
 router.delete('/:id', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('files')
+    const { data, error } = await (req.supabase || supabase).from('files')
       .delete()
       .eq('id', req.params.id)
       .select('*')
@@ -111,8 +108,7 @@ router.post('/delete-batch', async (req, res) => {
       return res.status(400).json({ error: 'ids must be a non-empty array' });
     }
 
-    const { data, error } = await supabase
-      .from('files')
+    const { data, error } = await (req.supabase || supabase).from('files')
       .delete()
       .in('id', ids)
       .select('*');

@@ -9,16 +9,14 @@ const { protect } = require('../middleware/auth');
 router.get('/peerpoints/:userId', protect, async (req, res) => {
   try {
     // Sum peer_points from all room memberships
-    const { data: memberships } = await supabase
-      .from('room_members')
+    const { data: memberships } = await (req.supabase || supabase).from('room_members')
       .select('room_id, peer_points, role')
       .eq('user_id', req.params.userId);
 
     const totalPoints = (memberships || []).reduce((sum, m) => sum + (m.peer_points || 0), 0);
 
     // Get unlocked rewards
-    const { data: unlocked } = await supabase
-      .from('user_unlocked_rewards')
+    const { data: unlocked } = await (req.supabase || supabase).from('user_unlocked_rewards')
       .select('*, reward:reward_id(*)')
       .eq('user_id', req.params.userId);
 
@@ -48,8 +46,7 @@ router.post('/peerpoints/award', protect, async (req, res) => {
     }
 
     // Only owner/admin can award points
-    const { data: me } = await supabase
-      .from('room_members')
+    const { data: me } = await (req.supabase || supabase).from('room_members')
       .select('role')
       .eq('room_id', room_id)
       .eq('user_id', req.user.id)
@@ -59,8 +56,7 @@ router.post('/peerpoints/award', protect, async (req, res) => {
       return res.status(403).json({ error: 'Ban khong co quyen tang diem' });
     }
 
-    const { data: member, error } = await supabase
-      .from('room_members')
+    const { data: member, error } = await (req.supabase || supabase).from('room_members')
       .update({ peer_points: supabase.raw(`peer_points + ${points}`) })
       .eq('room_id', room_id)
       .eq('user_id', user_id)
@@ -70,8 +66,7 @@ router.post('/peerpoints/award', protect, async (req, res) => {
     if (error) throw error;
 
     // Get updated total
-    const { data: memberships } = await supabase
-      .from('room_members')
+    const { data: memberships } = await (req.supabase || supabase).from('room_members')
       .select('peer_points')
       .eq('user_id', user_id);
     const total = (memberships || []).reduce((sum, m) => sum + (m.peer_points || 0), 0);
@@ -93,8 +88,7 @@ router.post('/peerpoints/award', protect, async (req, res) => {
 // ===========================================================================
 router.get('/rewards', protect, async (req, res) => {
   try {
-    const { data: rewards } = await supabase
-      .from('peer_rewards')
+    const { data: rewards } = await (req.supabase || supabase).from('peer_rewards')
       .select('*')
       .eq('is_active', true)
       .order('cost', { ascending: true });
@@ -115,8 +109,7 @@ router.post('/rewards/unlock', protect, async (req, res) => {
     if (!reward_id) return res.status(400).json({ error: 'Thieu reward_id' });
 
     // Get reward info
-    const { data: reward } = await supabase
-      .from('peer_rewards')
+    const { data: reward } = await (req.supabase || supabase).from('peer_rewards')
       .select('*')
       .eq('id', reward_id)
       .maybeSingle();
@@ -124,8 +117,7 @@ router.post('/rewards/unlock', protect, async (req, res) => {
     if (!reward) return res.status(404).json({ error: 'Khong tim thay reward' });
 
     // Check if already unlocked
-    const { data: existing } = await supabase
-      .from('user_unlocked_rewards')
+    const { data: existing } = await (req.supabase || supabase).from('user_unlocked_rewards')
       .select('id')
       .eq('user_id', req.user.id)
       .eq('reward_id', reward_id)
@@ -136,8 +128,7 @@ router.post('/rewards/unlock', protect, async (req, res) => {
     }
 
     // Calculate total points
-    const { data: memberships } = await supabase
-      .from('room_members')
+    const { data: memberships } = await (req.supabase || supabase).from('room_members')
       .select('peer_points')
       .eq('user_id', req.user.id);
     const totalPoints = (memberships || []).reduce((sum, m) => sum + (m.peer_points || 0), 0);
@@ -156,8 +147,7 @@ router.post('/rewards/unlock', protect, async (req, res) => {
       if (remaining <= 0) break;
       const deductFromThis = Math.min(m.peer_points || 0, remaining);
       if (deductFromThis > 0) {
-        await supabase
-          .from('room_members')
+        await (req.supabase || supabase).from('room_members')
           .update({ peer_points: supabase.raw(`peer_points - ${deductFromThis}`) })
           .eq('id', m.id);
         remaining -= deductFromThis;
@@ -165,8 +155,7 @@ router.post('/rewards/unlock', protect, async (req, res) => {
     }
 
     // Record unlock
-    const { data: unlocked, error } = await supabase
-      .from('user_unlocked_rewards')
+    const { data: unlocked, error } = await (req.supabase || supabase).from('user_unlocked_rewards')
       .insert({ user_id: req.user.id, reward_id })
       .select('*')
       .single();

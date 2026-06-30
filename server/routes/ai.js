@@ -16,10 +16,15 @@ const { extractText, isImageType, getImageMimeType } = require('../services/extr
 const { uploadToStorage } = require('../services/storageService');
 const { generatePodcastAudio } = require('../services/ttsService');
 const { fixLatin1Name } = require('../utils/encoding');
+let fileTypeFromBuffer;
+(async () => {
+  const fileType = await import('file-type');
+  fileTypeFromBuffer = fileType.fileTypeFromBuffer;
+})();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
 const handwritingUpload = multer({
@@ -30,8 +35,7 @@ const handwritingUpload = multer({
 const VALID_TEMPLATES = ['academic-blue', 'modern-card', 'sketch-notebook', 'minimalist'];
 
 async function getFolderOr404(id, res) {
-  const { data, error } = await supabase
-    .from('folders').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await (req.supabase || supabase).from('folders').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   if (!data) {
     res.status(404).json({ error: 'Folder not found' });
@@ -58,8 +62,7 @@ function isMeaningfulText(text) {
 }
 
 async function getAllTextsForFolder(folderId) {
-  const { data, error } = await supabase
-    .from('files')
+  const { data, error } = await (req.supabase || supabase).from('files')
     .select('extracted_text')
     .eq('folder_id', folderId);
   if (error) throw error;
@@ -77,17 +80,30 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
     const results = [];
 
     for (const file of req.files) {
+      // Magic Number Check
+      if (fileTypeFromBuffer) {
+        const typeInfo = await fileTypeFromBuffer(file.buffer);
+        const ext = file.originalname.split('.').pop().toLowerCase();
+        if (typeInfo) {
+          const safeMimes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/png', 'image/jpeg', 'image/webp'];
+          if (!safeMimes.includes(typeInfo.mime)) {
+             throw new Error(`Định dạng file không an toàn: ${typeInfo.mime}`);
+          }
+        } else if (ext !== 'txt') {
+          throw new Error('Không thể xác định định dạng file hoặc file không được hỗ trợ');
+        }
+      }
+
       const originalNameUtf8 = fixLatin1Name(file.originalname);
       const ext = originalNameUtf8.split('.').pop().toLowerCase();
 
       // Build folders context for AI
-      const { data: folders, error: foldersErr } = await supabase.from('folders').select('*');
+      const { data: folders, error: foldersErr } = await (req.supabase || supabase).from('folders').select('*');
       if (foldersErr) throw foldersErr;
 
       const foldersWithTags = [];
       for (const f of folders) {
-        const { data: filesInFolder } = await supabase
-          .from('files').select('ai_tags').eq('folder_id', f.id);
+        const { data: filesInFolder } = await (req.supabase || supabase).from('files').select('ai_tags').eq('folder_id', f.id);
         const uniqueTags = [...new Set((filesInFolder || []).flatMap(fi => fi.ai_tags || []))];
         foldersWithTags.push({
           folder_name: f.name,
@@ -131,8 +147,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
 
       // Find folder by case-insensitive name
       const targetName = classification.folder_name.trim();
-      const { data: existing } = await supabase
-        .from('folders').select('*').ilike('name', targetName).maybeSingle();
+      const { data: existing } = await (req.supabase || supabase).from('folders').select('*').ilike('name', targetName).maybeSingle();
 
       // Safety check: if AI returned an existing folder name but the subject
       // doesn't match, refuse the merge and create a fresh folder instead.
@@ -157,15 +172,13 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
         let cleanName = chap ? `${subj}/${chap}` : subj;
 
         // Avoid clashing with another existing folder of that exact name
-        const { data: nameClash } = await supabase
-          .from('folders').select('id').ilike('name', cleanName).maybeSingle();
+        const { data: nameClash } = await (req.supabase || supabase).from('folders').select('id').ilike('name', cleanName).maybeSingle();
         if (nameClash) {
           cleanName = `${cleanName} ${Date.now().toString().slice(-4)}`;
         }
         classification.folder_name = cleanName;
 
-        const { data: created, error: createErr } = await supabase
-          .from('folders')
+        const { data: created, error: createErr } = await (req.supabase || supabase).from('folders')
           .insert({
             name: cleanName,
             subject: subj,
@@ -177,8 +190,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
         if (createErr) throw createErr;
         folder = created;
       } else {
-        const { data: created, error: createErr } = await supabase
-          .from('folders')
+        const { data: created, error: createErr } = await (req.supabase || supabase).from('folders')
           .insert({
             name: classification.folder_name,
             subject: classification.subject || '',
@@ -200,8 +212,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
         extractedText = await extractText(file.buffer, ext) || '';
       }
 
-      const { data: newFile, error: insertErr } = await supabase
-        .from('files')
+      const { data: newFile, error: insertErr } = await (req.supabase || supabase).from('files')
         .insert({
           folder_id: folder.id,
           original_name: originalNameUtf8,
@@ -275,8 +286,7 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
       throw e;
     }
 
-    await supabase
-      .from('folders')
+    await (req.supabase || supabase).from('folders')
       .update({ cheat_sheet_json: json })
       .eq('id', folder.id);
 
@@ -302,8 +312,7 @@ router.post('/cheatsheet/:folderId/template', async (req, res) => {
     if (!VALID_TEMPLATES.includes(template)) {
       return res.status(400).json({ error: `template phải là một trong ${VALID_TEMPLATES.join(', ')}` });
     }
-    const { data, error } = await supabase
-      .from('folders')
+    const { data, error } = await (req.supabase || supabase).from('folders')
       .update({ selected_template: template })
       .eq('id', req.params.folderId)
       .select('*')
@@ -332,8 +341,7 @@ router.post('/cheatsheet/:folderId/migrate', async (req, res) => {
     }
 
     const json = await migrateMarkdownToJson(folder.cheat_sheet_markdown);
-    await supabase
-      .from('folders')
+    await (req.supabase || supabase).from('folders')
       .update({ cheat_sheet_json: json })
       .eq('id', folder.id);
 
@@ -365,8 +373,7 @@ router.post(
       const sampleUrl = await uploadToStorage(req.file);
       const analysis = await analyzeHandwriting(req.file.buffer, mimeType);
 
-      await supabase
-        .from('folders')
+      await (req.supabase || supabase).from('folders')
         .update({
           handwriting_font: analysis.font_family,
           handwriting_sample_url: sampleUrl,
@@ -398,8 +405,7 @@ router.post('/cheatsheet/:folderId/handwriting/manual', async (req, res) => {
     if (!VALID_FONTS.includes(font_family)) {
       return res.status(400).json({ error: `font_family phải là một trong ${VALID_FONTS.join(', ')}` });
     }
-    const { data, error } = await supabase
-      .from('folders')
+    const { data, error } = await (req.supabase || supabase).from('folders')
       .update({ handwriting_font: font_family, selected_template: 'sketch-notebook' })
       .eq('id', req.params.folderId)
       .select('*')
@@ -417,8 +423,7 @@ router.post('/cheatsheet/:folderId/handwriting/manual', async (req, res) => {
 // ===========================================================================
 router.delete('/cheatsheet/:folderId', async (req, res) => {
   try {
-    const { error } = await supabase
-      .from('folders')
+    const { error } = await (req.supabase || supabase).from('folders')
       .update({ cheat_sheet_json: null, cheat_sheet_markdown: '' })
       .eq('id', req.params.folderId);
     if (error) throw error;
@@ -458,8 +463,7 @@ router.post('/podcast/:folderId', async (req, res) => {
       console.log('TTS generation skipped:', e.message);
     }
 
-    await supabase
-      .from('folders')
+    await (req.supabase || supabase).from('folders')
       .update({
         podcast_script: script,
         podcast_audio_url: audioUrl || ''
@@ -478,8 +482,7 @@ router.post('/podcast/:folderId', async (req, res) => {
 // ===========================================================================
 router.delete('/podcast/:folderId', async (req, res) => {
   try {
-    const { error } = await supabase
-      .from('folders')
+    const { error } = await (req.supabase || supabase).from('folders')
       .update({ podcast_script: [], podcast_audio_url: '' })
       .eq('id', req.params.folderId);
     if (error) throw error;
@@ -521,8 +524,7 @@ router.post('/suggest-role', protect, async (req, res) => {
     }
 
     // Get room info
-    const { data: room } = await supabase
-      .from('rooms')
+    const { data: room } = await (req.supabase || supabase).from('rooms')
       .select('name, topic')
       .eq('id', roomId)
       .maybeSingle();
@@ -530,8 +532,7 @@ router.post('/suggest-role', protect, async (req, res) => {
     if (!room) return res.status(404).json({ error: 'Khong tim thay phong' });
 
     // Get files in room for context
-    const { data: roomFiles } = await supabase
-      .from('room_files')
+    const { data: roomFiles } = await (req.supabase || supabase).from('room_files')
       .select('original_name, extracted_text')
       .eq('room_id', roomId)
       .limit(10);
@@ -541,8 +542,7 @@ router.post('/suggest-role', protect, async (req, res) => {
       .join('\n\n');
 
     // Get member names
-    const { data: members } = await supabase
-      .from('users')
+    const { data: members } = await (req.supabase || supabase).from('users')
       .select('id, name')
       .in('id', memberIds);
 

@@ -52,9 +52,13 @@ PeerNoted là một nền tảng quản lý tri thức cá nhân và học tập
 - Chia sẻ cheat sheet, podcast ra diễn đàn công khai
 - Like, comment, tương tác
 
-###  Bảo mật
-- JWT authentication (email/password hoặc Google OAuth)
-- bcryptjs hash password (10 salt rounds)
+### 🛡️ Bảo mật
+- **Row Level Security (RLS)** trên Supabase: Bảo vệ dữ liệu từng file/folder ở mức Database
+- **Mã hóa đầu cuối (E2EE)**: Mã hóa file chia sẻ trong phòng kín bằng thuật toán AES-GCM (Web Crypto API)
+- **Chống Prompt Injection**: Giới hạn độ dài và lọc chặt system prompt trước khi gửi cho LLM (chống nhồi nhét mã độc)
+- **Upload Security**: Kiểm tra Magic Number bằng `file-type` để xác nhận MIME type thực tế, ngăn chặn ngụy trang file thực thi
+- **Network Security**: Rate Limiting chặn Spam/DDoS và cấu hình CORS nghiêm ngặt
+- JWT authentication (email/password hoặc Google OAuth) + bcryptjs hash password (10 salt rounds)
 - JSON Schema strict mode cho mọi LLM call → chống hallucination
 
 ---
@@ -116,10 +120,11 @@ Server (Node.js + Express 5)
 | Layer | Công nghệ | Vai trò |
 |---|---|---|
 | Runtime | Node.js (CommonJS) | — |
-| Web | Express 5.2 | Router, CORS |
+| Web | Express 5.2, express-rate-limit | Router, CORS, Rate Limit |
 | WebSocket | socket.io 4.8 | Realtime |
 | DB | @supabase/supabase-js 2.106 | Postgres REST |
 | Auth | bcryptjs 3, jsonwebtoken 9, google-auth-library 10 | Hash, JWT, Google |
+| Upload | multer, file-type | Xử lý file tải lên, check Magic Number |
 | AI | openai 6.38 (JSON Schema strict) | Phân loại, cheat, podcast |
 | TTS | edge-tts-universal 1.4 | Neural Voice free |
 | Text | pdf-parse 2.4, mammoth 1.12 | PDF/DOCX → text |
@@ -300,9 +305,9 @@ Tất cả prefix /api.
 
 ## 8. Lộ trình
 
-- [ ] Bật RLS + multi-user
+- [x] Bật RLS + multi-user
 - [ ] OCR pipeline cho PDF scan
 - [ ] Wire AI config UI (tab Cài đặt)
 - [ ] Supabase Storage delete
-- [ ] End-to-end encryption cho file phòng
+- [x] End-to-end encryption cho file phòng
 - [ ] PWA offline support

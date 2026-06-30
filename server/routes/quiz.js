@@ -6,8 +6,7 @@ const { generateQuiz } = require('../services/aiService');
 
 // Helper to get folder texts (copied from ai.js for simplicity, or we could export it)
 async function getAllTextsForFolder(folderId) {
-  const { data, error } = await supabase
-    .from('files')
+  const { data, error } = await (req.supabase || supabase).from('files')
     .select('extracted_text')
     .eq('folder_id', folderId);
   if (error) throw error;
@@ -25,8 +24,7 @@ router.post('/generate/:folderId', protect, async (req, res) => {
     const { folderId } = req.params;
     
     // Get folder name
-    const { data: folder, error: folderErr } = await supabase
-      .from('folders')
+    const { data: folder, error: folderErr } = await (req.supabase || supabase).from('folders')
       .select('name')
       .eq('id', folderId)
       .maybeSingle();
@@ -80,8 +78,7 @@ router.post('/submit', protect, async (req, res) => {
     }
 
     // Insert attempts
-    const { data: insertedAttempts, error: attemptErr } = await supabase
-      .from('quiz_attempts')
+    const { data: insertedAttempts, error: attemptErr } = await (req.supabase || supabase).from('quiz_attempts')
       .insert(attemptsToInsert)
       .select('*');
 
@@ -103,8 +100,7 @@ router.post('/submit', protect, async (req, res) => {
       });
 
     if (srItemsToInsert.length > 0) {
-      const { error: srErr } = await supabase
-        .from('spaced_repetition_items')
+      const { error: srErr } = await (req.supabase || supabase).from('spaced_repetition_items')
         .insert(srItemsToInsert);
       if (srErr) throw srErr;
     }
@@ -127,8 +123,7 @@ router.get('/stats', protect, async (req, res) => {
   try {
     const userId = req.user.id;
     // Get all attempts for this user
-    const { data: attempts, error } = await supabase
-      .from('quiz_attempts')
+    const { data: attempts, error } = await (req.supabase || supabase).from('quiz_attempts')
       .select('topic_tag, is_correct')
       .eq('user_id', userId);
 
@@ -214,8 +209,7 @@ router.get('/spaced-repetition', protect, async (req, res) => {
     const now = new Date().toISOString();
     
     // We need to join with quiz_attempts to get the question and explanation
-    const { data: srItems, error } = await supabase
-      .from('spaced_repetition_items')
+    const { data: srItems, error } = await (req.supabase || supabase).from('spaced_repetition_items')
       .select(`
         id,
         next_review_at,
@@ -251,8 +245,7 @@ router.post('/spaced-repetition/review/:id', protect, async (req, res) => {
     const { is_correct } = req.body; // true if the user remembered/got it right again
 
     // Get current item
-    const { data: srItem, error: fetchErr } = await supabase
-      .from('spaced_repetition_items')
+    const { data: srItem, error: fetchErr } = await (req.supabase || supabase).from('spaced_repetition_items')
       .select('*')
       .eq('id', srItemId)
       .single();
@@ -294,8 +287,7 @@ router.post('/spaced-repetition/review/:id', protect, async (req, res) => {
       };
     }
 
-    const { data: updated, error: updateErr } = await supabase
-      .from('spaced_repetition_items')
+    const { data: updated, error: updateErr } = await (req.supabase || supabase).from('spaced_repetition_items')
       .update(updateData)
       .eq('id', srItemId)
       .select('*')

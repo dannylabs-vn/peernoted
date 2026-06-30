@@ -7,8 +7,7 @@ const IMAGE_TYPES = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 const DOC_TYPES = ['docx', 'doc', 'txt'];
 
 async function countFilesByType(folderId) {
-  const { data, error } = await supabase
-    .from('files')
+  const { data, error } = await (req.supabase || supabase).from('files')
     .select('file_type')
     .eq('folder_id', folderId);
   if (error) throw error;
@@ -26,8 +25,7 @@ async function countFilesByType(folderId) {
 // GET all folders
 router.get('/', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('folders')
+    const { data, error } = await (req.supabase || supabase).from('folders')
       .select('*')
       .order('updated_at', { ascending: false });
     if (error) throw error;
@@ -47,8 +45,7 @@ router.get('/', async (req, res) => {
 // GET single folder
 router.get('/:id', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('folders')
+    const { data, error } = await (req.supabase || supabase).from('folders')
       .select('*')
       .eq('id', req.params.id)
       .maybeSingle();
@@ -66,8 +63,7 @@ router.post('/', async (req, res) => {
   try {
     const { name, subject = '', chapter = '', grade = '' } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
-    const { data, error } = await supabase
-      .from('folders')
+    const { data, error } = await (req.supabase || supabase).from('folders')
       .insert({ name, subject, chapter, grade })
       .select('*')
       .single();
@@ -87,8 +83,7 @@ router.put('/:id', async (req, res) => {
     if (subject !== undefined) patch.subject = subject;
     if (chapter !== undefined) patch.chapter = chapter;
     if (grade !== undefined) patch.grade = grade;
-    const { data, error } = await supabase
-      .from('folders')
+    const { data, error } = await (req.supabase || supabase).from('folders')
       .update(patch)
       .eq('id', req.params.id)
       .select('*')
@@ -107,8 +102,7 @@ router.delete('/:id', async (req, res) => {
     const folderId = req.params.id;
 
     // 1. Xóa hết files trong folder (kèm cleanup storage)
-    const { data: files, error: fileErr } = await supabase
-      .from('files')
+    const { data: files, error: fileErr } = await (req.supabase || supabase).from('files')
       .delete()
       .eq('folder_id', folderId)
       .select('*');
@@ -121,8 +115,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     // 2. Xóa folder
-    const { data, error } = await supabase
-      .from('folders')
+    const { data, error } = await (req.supabase || supabase).from('folders')
       .delete()
       .eq('id', folderId)
       .select('id')
@@ -145,8 +138,7 @@ router.post('/delete-batch', async (req, res) => {
     }
 
     // 1. Xóa hết files trong các folder
-    const { data: files, error: fileErr } = await supabase
-      .from('files')
+    const { data: files, error: fileErr } = await (req.supabase || supabase).from('files')
       .delete()
       .in('folder_id', ids)
       .select('*');
@@ -159,8 +151,7 @@ router.post('/delete-batch', async (req, res) => {
     }
 
     // 2. Xóa các folders
-    const { data, error } = await supabase
-      .from('folders')
+    const { data, error } = await (req.supabase || supabase).from('folders')
       .delete()
       .in('id', ids)
       .select('id');

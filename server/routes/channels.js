@@ -5,8 +5,7 @@ const { protect } = require('../middleware/auth');
 
 // Helper: check if user has owner/admin role in room
 async function canManageChannels(roomId, userId) {
-  const { data: member } = await supabase
-    .from('room_members')
+  const { data: member } = await (req.supabase || supabase).from('room_members')
     .select('role')
     .eq('room_id', roomId)
     .eq('user_id', userId)
@@ -28,8 +27,7 @@ router.post('/rooms/:roomId/channels', protect, async (req, res) => {
       return res.status(403).json({ error: 'Ban khong co quyen tao channel' });
     }
 
-    const { data: channel, error } = await supabase
-      .from('room_channels')
+    const { data: channel, error } = await (req.supabase || supabase).from('room_channels')
       .insert({
         room_id: req.params.roomId,
         name: name.trim().toLowerCase().replace(/\s+/g, '-'),
@@ -68,8 +66,7 @@ router.put('/rooms/:roomId/channels/:channelId', protect, async (req, res) => {
     if (name !== undefined) updates.name = name.trim().toLowerCase().replace(/\s+/g, '-');
     if (description !== undefined) updates.description = description;
 
-    const { data: channel, error } = await supabase
-      .from('room_channels')
+    const { data: channel, error } = await (req.supabase || supabase).from('room_channels')
       .update(updates)
       .eq('id', req.params.channelId)
       .eq('room_id', req.params.roomId)
@@ -101,8 +98,7 @@ router.delete('/rooms/:roomId/channels/:channelId', protect, async (req, res) =>
     }
 
     // Cannot delete the default 'chat-chung' channel
-    const { data: channel } = await supabase
-      .from('room_channels')
+    const { data: channel } = await (req.supabase || supabase).from('room_channels')
       .select('name')
       .eq('id', req.params.channelId)
       .eq('room_id', req.params.roomId)
@@ -113,8 +109,7 @@ router.delete('/rooms/:roomId/channels/:channelId', protect, async (req, res) =>
       return res.status(400).json({ error: 'Khong the xoa channel mac dinh' });
     }
 
-    const { error } = await supabase
-      .from('room_channels')
+    const { error } = await (req.supabase || supabase).from('room_channels')
       .delete()
       .eq('id', req.params.channelId)
       .eq('room_id', req.params.roomId);

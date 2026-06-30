@@ -19,8 +19,7 @@ router.post('/', protect, async (req, res) => {
     }
 
     // Check room limit
-    const { count } = await supabase
-      .from('rooms')
+    const { count } = await (req.supabase || supabase).from('rooms')
       .select('id', { count: 'exact', head: true })
       .eq('owner_id', req.user.id);
 
@@ -30,8 +29,7 @@ router.post('/', protect, async (req, res) => {
 
     // Create room
     const invite_code = uuidv4().slice(0, 8).toUpperCase();
-    const { data: room, error } = await supabase
-      .from('rooms')
+    const { data: room, error } = await (req.supabase || supabase).from('rooms')
       .insert({
         name: name.trim(),
         description,
@@ -46,8 +44,7 @@ router.post('/', protect, async (req, res) => {
     if (error) throw error;
 
     // Add owner as member with 'owner' role
-    const { data: member, error: memberError } = await supabase
-      .from('room_members')
+    const { data: member, error: memberError } = await (req.supabase || supabase).from('room_members')
       .insert({
         room_id: room.id,
         user_id: req.user.id,
@@ -59,8 +56,7 @@ router.post('/', protect, async (req, res) => {
     if (memberError) throw memberError;
 
     // Create default channel 'chat-chung'
-    const { error: channelError } = await supabase
-      .from('room_channels')
+    const { error: channelError } = await (req.supabase || supabase).from('room_channels')
       .insert({
         room_id: room.id,
         name: 'chat-chung',
@@ -87,8 +83,7 @@ router.post('/', protect, async (req, res) => {
 router.get('/', protect, async (req, res) => {
   try {
     // Rooms user has joined
-    const { data: myMemberships, error: membershipError } = await supabase
-      .from('room_members')
+    const { data: myMemberships, error: membershipError } = await (req.supabase || supabase).from('room_members')
       .select('room_id, role')
       .eq('user_id', req.user.id);
 
@@ -98,8 +93,7 @@ router.get('/', protect, async (req, res) => {
     const myRoomIds = Array.from(myMembershipByRoom.keys());
 
     // Public rooms everyone can discover.
-    const { data: publicRooms, error: publicError } = await supabase
-      .from('rooms')
+    const { data: publicRooms, error: publicError } = await (req.supabase || supabase).from('rooms')
       .select('*, owner:owner_id(id, name, email, avatar_url)')
       .eq('is_public', true)
       .order('created_at', { ascending: false })
@@ -110,8 +104,7 @@ router.get('/', protect, async (req, res) => {
     // Private/public rooms already joined by this user must also be listed.
     let joinedRooms = [];
     if (myRoomIds.length > 0) {
-      const { data, error } = await supabase
-        .from('rooms')
+      const { data, error } = await (req.supabase || supabase).from('rooms')
         .select('*, owner:owner_id(id, name, email, avatar_url)')
         .in('id', myRoomIds)
         .order('created_at', { ascending: false });
@@ -127,8 +120,7 @@ router.get('/', protect, async (req, res) => {
 
     // Fetch member counts for each room
     const roomsWithCounts = await Promise.all(Array.from(mergedRooms.values()).map(async (room) => {
-      const { count } = await supabase
-        .from('room_members')
+      const { count } = await (req.supabase || supabase).from('room_members')
         .select('id', { count: 'exact', head: true })
         .eq('room_id', room.id);
       const membership = myMembershipByRoom.get(room.id);
@@ -154,8 +146,7 @@ router.get('/', protect, async (req, res) => {
 // ===========================================================================
 router.get('/:id', protect, async (req, res) => {
   try {
-    const { data: room, error } = await supabase
-      .from('rooms')
+    const { data: room, error } = await (req.supabase || supabase).from('rooms')
       .select('*, owner:owner_id(id, name, email, avatar_url)')
       .eq('id', req.params.id)
       .single();
@@ -165,8 +156,7 @@ router.get('/:id', protect, async (req, res) => {
     }
 
     // Check membership
-    const { data: myMembership } = await supabase
-      .from('room_members')
+    const { data: myMembership } = await (req.supabase || supabase).from('room_members')
       .select('id, role, peer_points')
       .eq('room_id', room.id)
       .eq('user_id', req.user.id)
@@ -180,13 +170,11 @@ router.get('/:id', protect, async (req, res) => {
 
     // Only fetch members/channels if user is a member
     if (myMembership) {
-      const { data: members } = await supabase
-        .from('room_members')
+      const { data: members } = await (req.supabase || supabase).from('room_members')
         .select('*, user:user_id(id, name, email, avatar_url)')
         .eq('room_id', room.id);
 
-      const { data: channels } = await supabase
-        .from('room_channels')
+      const { data: channels } = await (req.supabase || supabase).from('room_channels')
         .select('*')
         .eq('room_id', room.id)
         .order('created_at', { ascending: true });
@@ -204,8 +192,7 @@ router.get('/:id', protect, async (req, res) => {
       detail.channels = toApiList(channels);
     }
 
-    const { count } = await supabase
-      .from('room_members')
+    const { count } = await (req.supabase || supabase).from('room_members')
       .select('id', { count: 'exact', head: true })
       .eq('room_id', room.id);
     detail.member_count = count || 0;
@@ -225,8 +212,7 @@ router.put('/:id', protect, async (req, res) => {
     const { name, description, topic, is_public } = req.body;
 
     // Check permission
-    const { data: member } = await supabase
-      .from('room_members')
+    const { data: member } = await (req.supabase || supabase).from('room_members')
       .select('role')
       .eq('room_id', req.params.id)
       .eq('user_id', req.user.id)
@@ -242,8 +228,7 @@ router.put('/:id', protect, async (req, res) => {
     if (topic !== undefined) updates.topic = topic;
     if (is_public !== undefined) updates.is_public = is_public;
 
-    const { data: room, error } = await supabase
-      .from('rooms')
+    const { data: room, error } = await (req.supabase || supabase).from('rooms')
       .update(updates)
       .eq('id', req.params.id)
       .select('*')
@@ -262,8 +247,7 @@ router.put('/:id', protect, async (req, res) => {
 // ===========================================================================
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const { data: member } = await supabase
-      .from('room_members')
+    const { data: member } = await (req.supabase || supabase).from('room_members')
       .select('role')
       .eq('room_id', req.params.id)
       .eq('user_id', req.user.id)
@@ -274,8 +258,7 @@ router.delete('/:id', protect, async (req, res) => {
     }
 
     // Room cascade will delete members, channels, files
-    const { error } = await supabase
-      .from('rooms')
+    const { error } = await (req.supabase || supabase).from('rooms')
       .delete()
       .eq('id', req.params.id);
 
@@ -298,8 +281,7 @@ router.post('/join', protect, async (req, res) => {
     }
 
     // Find room
-    const { data: room } = await supabase
-      .from('rooms')
+    const { data: room } = await (req.supabase || supabase).from('rooms')
       .select('*')
       .eq('invite_code', invite_code.trim().toUpperCase())
       .maybeSingle();
@@ -311,8 +293,7 @@ router.post('/join', protect, async (req, res) => {
     // Anyone with the correct invite code can join, even if the room is not public.
 
     // Check existing membership
-    const { data: existing } = await supabase
-      .from('room_members')
+    const { data: existing } = await (req.supabase || supabase).from('room_members')
       .select('id')
       .eq('room_id', room.id)
       .eq('user_id', req.user.id)
@@ -323,8 +304,7 @@ router.post('/join', protect, async (req, res) => {
     }
 
     // Check member limit
-    const { count } = await supabase
-      .from('room_members')
+    const { count } = await (req.supabase || supabase).from('room_members')
       .select('id', { count: 'exact', head: true })
       .eq('room_id', room.id);
 
@@ -333,8 +313,7 @@ router.post('/join', protect, async (req, res) => {
     }
 
     // Add member
-    const { data: member, error } = await supabase
-      .from('room_members')
+    const { data: member, error } = await (req.supabase || supabase).from('room_members')
       .insert({
         room_id: room.id,
         user_id: req.user.id,
@@ -366,8 +345,7 @@ router.post('/join', protect, async (req, res) => {
 // ===========================================================================
 router.get('/:id/members', protect, async (req, res) => {
   try {
-    const { data: members } = await supabase
-      .from('room_members')
+    const { data: members } = await (req.supabase || supabase).from('room_members')
       .select('*, user:user_id(id, name, email, avatar_url)')
       .eq('room_id', req.params.id);
 
@@ -398,8 +376,7 @@ router.put('/:id/members/:userId', protect, async (req, res) => {
     }
 
     // Check permission: only owner can change roles
-    const { data: me } = await supabase
-      .from('room_members')
+    const { data: me } = await (req.supabase || supabase).from('room_members')
       .select('role')
       .eq('room_id', req.params.id)
       .eq('user_id', req.user.id)
@@ -409,8 +386,7 @@ router.put('/:id/members/:userId', protect, async (req, res) => {
       return res.status(403).json({ error: 'Chi chu phong moi co the thay doi vai tro' });
     }
 
-    const { data: member, error } = await supabase
-      .from('room_members')
+    const { data: member, error } = await (req.supabase || supabase).from('room_members')
       .update({ role })
       .eq('room_id', req.params.id)
       .eq('user_id', req.params.userId)
@@ -430,8 +406,7 @@ router.put('/:id/members/:userId', protect, async (req, res) => {
 // ===========================================================================
 router.delete('/:id/members/:userId', protect, async (req, res) => {
   try {
-    const { data: me } = await supabase
-      .from('room_members')
+    const { data: me } = await (req.supabase || supabase).from('room_members')
       .select('role')
       .eq('room_id', req.params.id)
       .eq('user_id', req.user.id)
@@ -442,8 +417,7 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
     }
 
     // Cannot kick owner
-    const { data: target } = await supabase
-      .from('room_members')
+    const { data: target } = await (req.supabase || supabase).from('room_members')
       .select('role')
       .eq('room_id', req.params.id)
       .eq('user_id', req.params.userId)
@@ -454,8 +428,7 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
       return res.status(400).json({ error: 'Khong the kick chu phong' });
     }
 
-    const { error } = await supabase
-      .from('room_members')
+    const { error } = await (req.supabase || supabase).from('room_members')
       .delete()
       .eq('room_id', req.params.id)
       .eq('user_id', req.params.userId);
@@ -477,8 +450,7 @@ router.post('/:id/library-files', protect, async (req, res) => {
     if (!file_id) return res.status(400).json({ error: 'Thieu file_id' });
 
     // Get original file from library
-    const { data: originalFile, error: fileError } = await supabase
-      .from('files')
+    const { data: originalFile, error: fileError } = await (req.supabase || supabase).from('files')
       .select('*')
       .eq('id', file_id)
       .maybeSingle();
@@ -488,8 +460,7 @@ router.post('/:id/library-files', protect, async (req, res) => {
     }
 
     // Insert into room_files
-    const { data: roomFile, error } = await supabase
-      .from('room_files')
+    const { data: roomFile, error } = await (req.supabase || supabase).from('room_files')
       .insert({
         room_id: req.params.id,
         channel_id: channel_id || null,

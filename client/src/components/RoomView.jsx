@@ -229,8 +229,8 @@ export default function RoomView({ room: initialRoom, user, onBack }) {
       {showFiles && (
         <div className="room-modal-overlay" onClick={() => setShowFiles(false)}>
           <div className="room-modal room-modal-lg" onClick={e => e.stopPropagation()}>
-            <h3>📁 Quản lý File</h3>
-            <RoomFileManager roomId={roomId} userId={user?._id} canManage={canManage} />
+            <h3>📁 Quản lý File (E2EE Protected)</h3>
+            <RoomFileManager roomId={roomId} userId={user?._id} canManage={canManage} inviteCode={room.invite_code} />
             <div className="room-modal-actions">
               <button className="btn-secondary" onClick={() => setShowFiles(false)}>Đóng</button>
             </div>
