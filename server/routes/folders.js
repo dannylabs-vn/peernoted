@@ -6,8 +6,8 @@ const { deleteFromStorage } = require('../services/storageService');
 const IMAGE_TYPES = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 const DOC_TYPES = ['docx', 'doc', 'txt'];
 
-async function countFilesByType(folderId) {
-  const { data, error } = await (req.supabase || supabase).from('files')
+async function countFilesByType(client, folderId) {
+  const { data, error } = await client.from('files')
     .select('file_type')
     .eq('folder_id', folderId);
   if (error) throw error;
@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
 
     const enriched = await Promise.all(
       data.map(async (folder) => {
-        const counts = await countFilesByType(folder.id);
+        const counts = await countFilesByType(req.supabase || supabase, folder.id);
         return { ...toApi(folder), ...counts };
       })
     );
@@ -51,7 +51,7 @@ router.get('/:id', async (req, res) => {
       .maybeSingle();
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Folder not found' });
-    const counts = await countFilesByType(data.id);
+    const counts = await countFilesByType(req.supabase || supabase, data.id);
     res.json({ ...toApi(data), ...counts });
   } catch (error) {
     res.status(500).json({ error: error.message });
