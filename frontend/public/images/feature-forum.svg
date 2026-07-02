@@ -1,0 +1,16 @@
+<svg width="382" height="328" viewBox="0 0 382 328" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M0 0H382V327.797H0V0Z" fill="#F1F0EE"/>
+  <rect x="79" y="60" width="160" height="110" rx="20" fill="#0B0B0B"/>
+  <path d="M109 170 L89 190 L129 170 Z" fill="#0B0B0B"/>
+  <rect x="70" y="51" width="160" height="110" rx="20" fill="#1C92FF" stroke="#0B0B0B" stroke-width="3"/>
+  <path d="M100 161 L80 181 L120 161 Z" fill="#1C92FF" stroke="#0B0B0B" stroke-width="3" stroke-linejoin="round"/>
+  <line x1="100" y1="90" x2="200" y2="90" stroke="#0B0B0B" stroke-width="4" stroke-linecap="round"/>
+  <line x1="100" y1="115" x2="160" y2="115" stroke="#0B0B0B" stroke-width="4" stroke-linecap="round"/>
+  <rect x="159" y="140" width="160" height="110" rx="20" fill="#0B0B0B"/>
+  <path d="M289 250 L309 270 L269 250 Z" fill="#0B0B0B"/>
+  <rect x="150" y="131" width="160" height="110" rx="20" fill="white" stroke="#0B0B0B" stroke-width="3"/>
+  <path d="M280 241 L300 261 L260 241 Z" fill="white" stroke="#0B0B0B" stroke-width="3" stroke-linejoin="round"/>
+  <line x1="180" y1="170" x2="280" y2="170" stroke="#0B0B0B" stroke-width="4" stroke-linecap="round"/>
+  <line x1="180" y1="195" x2="240" y2="195" stroke="#0B0B0B" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="320" cy="110" r="15" fill="#FF4A60" stroke="#0B0B0B" stroke-width="3"/>
+</svg>
