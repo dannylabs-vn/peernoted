@@ -17,6 +17,7 @@ function publicUser(user) {
     id: user.id,
     name: user.name,
     email: user.email,
+    username: user.username || '',
     school: user.school,
     cohort: user.cohort,
     avatar: user.avatar_url || ''
@@ -47,10 +48,14 @@ router.post('/register', async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
+    
+    const emailPrefix = normalizedEmail.split('@')[0];
+    const tag = Math.floor(1000 + Math.random() * 9000);
+    const username = `${emailPrefix}#${tag}`;
 
     const { data: user, error } = await supabase
       .from('users')
-      .insert({ name: name.trim(), email: normalizedEmail, password_hash, school, cohort })
+      .insert({ name: name.trim(), email: normalizedEmail, username, password_hash, school, cohort })
       .select('*')
       .single();
     if (error) throw error;
@@ -79,9 +84,17 @@ router.post('/login', async (req, res) => {
 
     const { data: user, error } = await supabase
       .from('users').select('*').eq('email', normalizedEmail).maybeSingle();
+
     if (error) throw error;
-    if (!user || !user.password_hash) {
+
+    if (!user) {
       return res.status(401).json({ error: 'Email hoặc mật khẩu không chính xác' });
+    }
+
+    if (!user.password_hash) {
+      return res.status(401).json({
+        error: 'Tài khoản này được tạo qua Google. Vui lòng đăng nhập bằng Google.'
+      });
     }
 
     const match = await bcrypt.compare(password, user.password_hash);
@@ -163,6 +176,78 @@ router.post('/google', async (req, res) => {
 // ===========================================================================
 router.get('/me', protect, async (req, res) => {
   res.json(publicUser(req.user));
+});
+
+// ===========================================================================
+// PUT /api/auth/me — update user profile (e.g. avatar)
+// ===========================================================================
+router.put('/me', protect, async (req, res) => {
+  try {
+    const { avatar_url } = req.body;
+    const updates = {};
+    if (avatar_url !== undefined) updates.avatar_url = avatar_url;
+
+    if (Object.keys(updates).length > 0) {
+      const { data: updated, error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', req.user.id)
+        .select('*')
+        .single();
+      
+      if (error) throw error;
+      return res.json(publicUser(updated));
+    }
+    res.json(publicUser(req.user));
+  } catch (error) {
+    console.error('[Auth PUT /me]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+const multer = require('multer');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const fs = require('fs');
+    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar_${req.user.id}_${Date.now()}${ext}`);
+  }
+});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
+
+router.post('/me/avatar', protect, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Vui lòng chọn ảnh' });
+
+    // In a real app we'd determine the true backend origin. We'll use a relative /uploads/ path.
+    // The Next.js rewrite in dev will proxy this if configured, or the frontend must prepend NEXT_PUBLIC_API_URL.
+    // However, since it's just an avatar URL, we will prefix it with localhost:5000 if not defined.
+    const backendUrl = process.env.API_URL || 'http://localhost:5000';
+    const avatarUrl = `${backendUrl}/uploads/${req.file.filename}`;
+
+    const { data: updated, error } = await supabase
+      .from('users')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', req.user.id)
+      .select('*')
+      .single();
+    
+    if (error) throw error;
+    res.json(publicUser(updated));
+  } catch (error) {
+    console.error('[Auth POST /me/avatar]', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

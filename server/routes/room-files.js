@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const { supabase, toApi, toApiList } = require('../config/supabase');
 const { protect } = require('../middleware/auth');
 const multer = require('multer');
+const { getFiles, saveFile, deleteFile } = require('../dataStore');
 
 let fileTypeFromFile;
 (async () => {
@@ -15,7 +16,12 @@ let fileTypeFromFile;
 // File upload config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '..', '..', 'uploads'));
+    const fs = require('fs');
+    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
@@ -44,21 +50,34 @@ router.post('/rooms/:roomId/files', protect, upload.single('file'), async (req, 
     const { channel_id } = req.body;
     const fileUrl = `/uploads/${req.file.filename}`;
 
-    const { data: roomFile, error } = await (req.supabase || supabase).from('room_files')
-      .insert({
-        room_id: req.params.roomId,
-        channel_id: channel_id || null,
-        uploaded_by: req.user.id,
-        original_name: req.file.originalname,
-        storage_url: fileUrl,
-        file_type: req.file.mimetype || path.extname(req.file.originalname).slice(1),
-        file_size: req.file.size,
-        source_type: 'upload'
-      })
+    const fileObj = {
+      room_id: req.params.roomId,
+      channel_id: channel_id || null,
+      uploaded_by: req.user.id,
+      original_name: req.file.originalname,
+      storage_url: fileUrl,
+      file_type: req.file.mimetype || path.extname(req.file.originalname).slice(1),
+      file_size: req.file.size,
+      source_type: 'upload'
+    };
+
+    let { data: roomFile, error } = await (req.supabase || supabase).from('room_files')
+      .insert(fileObj)
       .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.message && (error.message.includes('relation "public.room_files" does not exist') || error.message.includes('Could not find the table \'public.room_files\''))) {
+        roomFile = {
+          id: uuidv4(),
+          ...fileObj,
+          created_at: new Date().toISOString()
+        };
+        saveFile(roomFile);
+      } else {
+        throw error;
+      }
+    }
     res.status(201).json(toApi(roomFile));
   } catch (error) {
     console.error('[RoomFiles /upload]', error);
@@ -71,12 +90,33 @@ router.post('/rooms/:roomId/files', protect, upload.single('file'), async (req, 
 // ===========================================================================
 router.get('/rooms/:roomId/files', protect, async (req, res) => {
   try {
-    const { data: files } = await (req.supabase || supabase).from('room_files')
+    let { data: files, error } = await (req.supabase || supabase).from('room_files')
       .select('*, uploader:uploaded_by(id, name, avatar_url)')
       .eq('room_id', req.params.roomId)
       .order('created_at', { ascending: false });
 
-    res.json((files || []).map(f => ({
+    let dbFiles = files || [];
+    if (error) {
+      if (error.message && (error.message.includes('relation "public.room_files" does not exist') || error.message.includes('Could not find the table \'public.room_files\''))) {
+        dbFiles = [];
+      } else {
+        throw error;
+      }
+    }
+
+    const localFiles = getFiles().filter(f => f.room_id === req.params.roomId);
+    if (localFiles.length > 0) {
+      dbFiles = [...dbFiles, ...localFiles];
+      const seen = new Set();
+      dbFiles = dbFiles.filter(m => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
+      dbFiles.sort((a,b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+    }
+
+    res.json(dbFiles.map(f => ({
       ...toApi(f),
       uploader: f.uploader ? {
         _id: f.uploader.id,
@@ -107,9 +147,22 @@ router.delete('/rooms/:roomId/files/:fileId', protect, async (req, res) => {
       .eq('id', req.params.fileId)
       .maybeSingle();
 
-    if (!file) return res.status(404).json({ error: 'Khong tim thay file' });
+    const canDelete = member && (member.role === 'owner' || member.role === 'admin' || (file && file.uploaded_by === req.user.id));
+    // If not found in DB but found in local dataStore, we assume they can delete it if they uploaded it
+    if (!file) {
+      const localFiles = getFiles();
+      const localFile = localFiles.find(f => f.id === req.params.fileId);
+      if (localFile) {
+        if (member && (member.role === 'owner' || member.role === 'admin' || localFile.uploaded_by === req.user.id)) {
+          deleteFile(req.params.fileId);
+          return res.json({ success: true });
+        } else {
+          return res.status(403).json({ error: 'Ban khong co quyen xoa file nay' });
+        }
+      }
+      return res.status(404).json({ error: 'Khong tim thay file' });
+    }
 
-    const canDelete = member && (member.role === 'owner' || member.role === 'admin' || file.uploaded_by === req.user.id);
     if (!canDelete) {
       return res.status(403).json({ error: 'Ban khong co quyen xoa file nay' });
     }
@@ -118,7 +171,7 @@ router.delete('/rooms/:roomId/files/:fileId', protect, async (req, res) => {
       .delete()
       .eq('id', req.params.fileId);
 
-    if (error) throw error;
+    if (error && !error.message.includes('does not exist')) throw error;
     res.json({ success: true });
   } catch (error) {
     console.error('[RoomFiles /delete]', error);

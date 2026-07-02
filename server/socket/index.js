@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const socketIo = require('socket.io');
+const { getMessages, saveMessage, getNicknames, saveNickname, getNickname } = require('../dataStore');
 const { supabase } = require('../config/supabase');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev';
@@ -33,6 +35,12 @@ function setupSocket(io) {
 
   io.on('connection', (socket) => {
     console.log(`🔵 Socket connected: ${socket.user.name} (${socket.id})`);
+    
+    // Broadcast total online users to everyone whenever someone connects
+    emitGlobalOnlineUsers(io);
+
+    // Join a personal room for private messages
+    socket.join(socket.userId);
 
     // ── Join room ──
     socket.on('join-room', async ({ roomId }) => {
@@ -56,14 +64,20 @@ function setupSocket(io) {
       if (!roomsPresence.has(roomId)) {
         roomsPresence.set(roomId, new Map());
       }
+      
+      const savedNick = getNickname(roomId, socket.userId);
+      const userObj = { ...socket.user, role: member.role, peer_points: member.peer_points };
+      if (savedNick) userObj.nickname = savedNick;
+      socket.user = userObj; // ensure socket has it too
+
       roomsPresence.get(roomId).set(socket.userId, {
         socketId: socket.id,
-        user: { ...socket.user, role: member.role, peer_points: member.peer_points }
+        user: userObj
       });
 
       // Broadcast online status to room
       io.to(roomId).emit('user-online', {
-        user: { ...socket.user, role: member.role, peer_points: member.peer_points }
+        user: userObj
       });
 
       // Send current online users to the joining user
@@ -71,6 +85,23 @@ function setupSocket(io) {
       socket.emit('room-online-users', { users: onlineUsers });
 
       console.log(`  👤 ${socket.user.name} joined room ${roomId}`);
+    });
+
+    // ── Change nickname ──
+    socket.on('change-nickname', async ({ roomId, nickname }) => {
+      if (roomsPresence.has(roomId) && roomsPresence.get(roomId).has(socket.userId)) {
+        const presence = roomsPresence.get(roomId).get(socket.userId);
+        presence.user.nickname = nickname; // update in memory
+        socket.user.nickname = nickname;   // also update on the socket itself for future messages
+        
+        // Update database in background (might fail if no column)
+        supabase.from('room_members').update({ nickname }).eq('room_id', roomId).eq('user_id', socket.userId).then();
+        // Fallback: save to local dataStore
+        saveNickname(roomId, socket.userId, nickname);
+        
+        io.to(roomId).emit('user-nickname-changed', { userId: socket.userId, nickname });
+        console.log(`  📝 ${socket.user.name} changed nickname to ${nickname} in room ${roomId}`);
+      }
     });
 
     // ── Leave room ──
@@ -126,15 +157,42 @@ function setupSocket(io) {
           socket.currentRoom = roomId;
         }
 
-        const message = {
-          id: `${Date.now()}-${socket.userId}`,
-          roomId,
-          channelId,
-          user: socket.user,
-          content: content.trim(),
-          type: 'text',
-          createdAt: new Date().toISOString()
-        };
+        const { data: insertedMsg, error: insertError } = await supabase
+          .from('room_messages')
+          .insert({
+            room_id: roomId,
+            channel_id: channelId,
+            user_id: socket.userId,
+            content: content.trim(),
+            type: 'text'
+          })
+          .select('*')
+          .single();
+
+        let message;
+        if (insertError) {
+          // Fallback to local file storage
+          message = {
+            id: `${Date.now()}-${socket.userId}`,
+            roomId,
+            channelId,
+            user: socket.user,
+            content: content.trim(),
+            type: 'text',
+            createdAt: new Date().toISOString()
+          };
+          saveMessage(message);
+        } else {
+          message = {
+            id: insertedMsg.id,
+            roomId,
+            channelId,
+            user: socket.user,
+            content: insertedMsg.content,
+            type: insertedMsg.type,
+            createdAt: insertedMsg.created_at
+          };
+        }
 
         // Broadcast to room, including sender.
         io.to(roomId).emit('new-message', message);
@@ -156,14 +214,52 @@ function setupSocket(io) {
       });
     });
 
+    // ── Private Messages ──
+    socket.on('send-private-message', async (data) => {
+      const { receiverId, content, msgId } = data;
+      // Emit to receiver
+      socket.to(receiverId).emit('private-message', {
+        id: msgId || Date.now().toString(),
+        sender_id: socket.userId,
+        receiver_id: receiverId,
+        content: content,
+        created_at: new Date().toISOString(),
+        sender: socket.user
+      });
+      // Also emit back to sender to confirm (if they have multiple tabs open)
+      socket.emit('private-message', {
+        id: msgId || Date.now().toString(),
+        sender_id: socket.userId,
+        receiver_id: receiverId,
+        content: content,
+        created_at: new Date().toISOString(),
+        sender: socket.user
+      });
+    });
+
     // ── Disconnect ──
     socket.on('disconnect', () => {
-      console.log(`🔴 Socket disconnected: ${socket.user.name}`);
+      console.log(`🔴 Socket disconnected: ${socket.user.name} (${socket.id})`);
       if (socket.currentRoom) {
         handleLeaveRoom(io, socket, socket.currentRoom);
       }
+      // Delay emit to ensure socket is fully removed from io.fetchSockets()
+      setTimeout(() => emitGlobalOnlineUsers(io), 50);
     });
   });
+}
+
+async function emitGlobalOnlineUsers(io) {
+  try {
+    const sockets = await io.fetchSockets();
+    const uniqueUsers = new Set();
+    sockets.forEach(s => {
+      if (s.userId) uniqueUsers.add(s.userId);
+    });
+    io.emit('global-online-users', uniqueUsers.size);
+  } catch (err) {
+    console.error('Error counting global users:', err);
+  }
 }
 
 function handleLeaveRoom(io, socket, roomId) {

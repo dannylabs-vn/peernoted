@@ -52,7 +52,7 @@ function schemaToHint(schema) {
   return `\n\nQUAN TRỌNG: Trả về JSON THUẦN (không markdown code block), tuân thủ schema:\n${JSON.stringify(s, null, 2)}\n\nMọi field bắt buộc phải có (dùng null nếu không áp dụng).`;
 }
 
-async function chatJSON({ model, messages, schema, maxTokens = 16000 }) {
+async function _chatJSON({ model, messages, schema, maxTokens = 16000 }) {
   if (PROVIDER === 'gemini') {
     // Append schema hint vào user message cuối cùng
     const augmented = messages.map((m, i) => {
@@ -77,7 +77,17 @@ async function chatJSON({ model, messages, schema, maxTokens = 16000 }) {
       response_format: { type: 'json_object' }
     });
     const raw = completion.choices[0].message.content;
-    // Gemini đôi khi vẫn bọc trong ```json ... ``` → strip trước parse
+    
+    // Robustly extract JSON object from potentially conversational response
+    const firstBrace = raw.indexOf('{');
+    const lastBrace = raw.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const jsonStr = raw.substring(firstBrace, lastBrace + 1);
+      return JSON.parse(jsonStr);
+    }
+    
+    // Fallback if no {} found (unlikely, but just in case)
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     return JSON.parse(cleaned);
   }
@@ -94,6 +104,33 @@ async function chatJSON({ model, messages, schema, maxTokens = 16000 }) {
   });
   const raw = completion.choices[0].message.content;
   return JSON.parse(raw);
+}
+
+async function callWithRetry(fn, maxRetries = 4) {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastError = e;
+      const status = e.status || e.response?.status;
+      const isSyntaxError = e instanceof SyntaxError;
+      
+      // 429 = Rate Limit, 5xx = Server Error, SyntaxError = LLM parsing error
+      if (status === 429 || status >= 500 || isSyntaxError) {
+        const delay = Math.min(2000 * Math.pow(2.5, i), 30000); // 2s, 5s, 12.5s, 30s
+        console.warn(`[AI] Error (Status: ${status || 'SyntaxError'}). Retrying in ${delay}ms... (Attempt ${i+1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        throw e; // Do not retry on 400 Bad Request etc.
+      }
+    }
+  }
+  throw lastError;
+}
+
+async function chatJSON(args) {
+  return callWithRetry(() => _chatJSON(args));
 }
 
 function imageMessagePart(buffer, mimeType) {
@@ -205,14 +242,16 @@ async function migrateMarkdownToJson(markdown) {
 }
 
 async function summarizeForPodcast(allTexts) {
-  const completion = await getClient().chat.completions.create({
-    model: TEXT_MODEL,
-    messages: [
-      { role: 'system', content: 'Bạn là chuyên gia tóm tắt tài liệu học tập. Giữ độ chính xác học thuật tuyệt đối.' },
-      { role: 'user', content: PROMPTS.summarizeForPodcast(allTexts) }
-    ]
+  return callWithRetry(async () => {
+    const completion = await getClient().chat.completions.create({
+      model: TEXT_MODEL,
+      messages: [
+        { role: 'system', content: 'Bạn là chuyên gia tóm tắt tài liệu học tập. Giữ độ chính xác học thuật tuyệt đối.' },
+        { role: 'user', content: PROMPTS.summarizeForPodcast(allTexts) }
+      ]
+    });
+    return completion.choices[0].message.content;
   });
-  return completion.choices[0].message.content;
 }
 
 async function generatePodcastScript(allTexts, folderName = '') {

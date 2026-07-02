@@ -5,9 +5,24 @@ const { supabase, toApi, toApiList } = require('../config/supabase');
 const { uploadToStorage, deleteFromStorage } = require('../services/storageService');
 const { fixLatin1Name } = require('../utils/encoding');
 
+const allowedMimes = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
+  'text/plain'
+];
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Định dạng file không được hỗ trợ. Chỉ chấp nhận PDF, Word, TXT hoặc hình ảnh.`));
+    }
+  }
 });
 
 // GET files by folder

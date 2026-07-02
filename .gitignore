@@ -11,6 +11,8 @@ node_modules/
 # ===== User-uploaded content (runtime) =====
 uploads/
 !uploads/.gitkeep
+.uploads/
+server/data/
 
 # ===== Build output =====
 dist/

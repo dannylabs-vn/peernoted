@@ -5,7 +5,7 @@ const { supabase, toApi, toApiList } = require('../config/supabase');
 const { protect } = require('../middleware/auth');
 
 // ─── Max limits ───
-const MAX_ROOMS_PER_USER = Number(process.env.MAX_ROOMS_PER_USER || 3);
+const MAX_ROOMS_PER_USER = Number(process.env.MAX_ROOMS_PER_USER || 10);
 const MAX_MEMBERS_PER_ROOM = Number(process.env.MAX_MEMBERS_PER_ROOM || 100);
 
 // ===========================================================================

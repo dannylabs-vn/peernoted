@@ -34,7 +34,7 @@ const handwritingUpload = multer({
 
 const VALID_TEMPLATES = ['academic-blue', 'modern-card', 'sketch-notebook', 'minimalist'];
 
-async function getFolderOr404(id, res) {
+async function getFolderOr404(req, id, res) {
   const { data, error } = await (req.supabase || supabase).from('folders').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   if (!data) {
@@ -61,7 +61,7 @@ function isMeaningfulText(text) {
   return wordHits.length >= 5;
 }
 
-async function getAllTextsForFolder(folderId) {
+async function getAllTextsForFolder(req, folderId) {
   const { data, error } = await (req.supabase || supabase).from('files')
     .select('extracted_text')
     .eq('folder_id', folderId);
@@ -87,7 +87,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
         if (typeInfo) {
           const safeMimes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/png', 'image/jpeg', 'image/webp'];
           if (!safeMimes.includes(typeInfo.mime)) {
-             throw new Error(`Định dạng file không an toàn: ${typeInfo.mime}`);
+            throw new Error(`Định dạng file không an toàn: ${typeInfo.mime}`);
           }
         } else if (ext !== 'txt') {
           throw new Error('Không thể xác định định dạng file hoặc file không được hỗ trợ');
@@ -116,7 +116,15 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
 
       let classification;
       if (isImageType(ext)) {
-        classification = await classifyFromImage(file.buffer, getImageMimeType(ext), foldersWithTags, originalNameUtf8);
+        // Skip AI for images and directly put into "Hình Ảnh" folder
+        classification = {
+          subject: 'Hình Ảnh',
+          chapter: 'Tài liệu ảnh',
+          grade: '',
+          folder_name: 'Hình Ảnh',
+          summary: `Ảnh được tải lên: ${originalNameUtf8}`,
+          tags: ['ảnh', 'thư-viện-ảnh']
+        };
       } else {
         const text = await extractText(file.buffer, ext);
         const meaningfulText = isMeaningfulText(text);
@@ -133,7 +141,19 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
             tags: ['cần-OCR']
           };
         } else {
-          classification = await classifyFromText(text, foldersWithTags, originalNameUtf8);
+          try {
+            classification = await classifyFromText(text, foldersWithTags, originalNameUtf8);
+          } catch (e) {
+            console.warn('classifyFromText failed (API overload), using fallback:', e.message);
+            classification = {
+              subject: 'Tài liệu chung',
+              chapter: '',
+              grade: '',
+              folder_name: 'Chưa phân loại (AI bận)',
+              summary: `(Tự động phân loại do AI đang bị quá tải) File: ${originalNameUtf8}`,
+              tags: ['văn-bản', 'chưa-phân-loại-kỹ']
+            };
+          }
         }
       }
 
@@ -246,7 +266,7 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
 // ===========================================================================
 router.get('/cheatsheet/:folderId', async (req, res) => {
   try {
-    const folder = await getFolderOr404(req.params.folderId, res);
+    const folder = await getFolderOr404(req, req.params.folderId, res);
     if (!folder) return;
 
     // Return cached JSON if present
@@ -261,7 +281,7 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
     }
 
     // Generate fresh
-    const allTexts = await getAllTextsForFolder(folder.id);
+    const allTexts = await getAllTextsForFolder(req, folder.id);
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({
         error: 'Không đủ nội dung văn bản trong thư mục này để tạo phao cứu cấp'
@@ -269,10 +289,11 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
     }
 
     let json = null;
+    let isMock = false;
     try {
       json = await generateCheatSheet(allTexts, folder.name);
     } catch (e) {
-      console.error('Cheat sheet JSON generation failed:', e.message);
+      console.warn('Cheat sheet JSON generation failed (AI overload), using fallback:', e.message);
       // Legacy markdown fallback if folder has it
       if (folder.cheat_sheet_markdown) {
         return res.json({
@@ -283,12 +304,29 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
           cached: true
         });
       }
-      throw e;
+      
+      // Temporary mock fallback if no legacy markdown
+      json = {
+        title: 'Phao cứu cấp (Tạm thời)',
+        sections: [
+          {
+            heading: 'Hệ thống AI đang bận',
+            blocks: [
+              { type: 'note', content: 'Hiện tại máy chủ AI đang nhận quá nhiều yêu cầu (có thể đã chạm ngưỡng giới hạn).', term: null, items: null, caption: null },
+              { type: 'list', content: 'Hướng giải quyết:', term: null, items: ['Vui lòng đợi khoảng 1-2 phút để hệ thống xả tải.', 'Bấm nút "Tạo lại phao" để thử lại.'], caption: null }
+            ]
+          }
+        ]
+      };
+      isMock = true;
     }
 
-    await (req.supabase || supabase).from('folders')
-      .update({ cheat_sheet_json: json })
-      .eq('id', folder.id);
+    // Chỉ lưu vào DB nếu là hàng thật (không phải mock)
+    if (!isMock) {
+      await (req.supabase || supabase).from('folders')
+        .update({ cheat_sheet_json: json })
+        .eq('id', folder.id);
+    }
 
     res.json({
       json,
@@ -330,7 +368,7 @@ router.post('/cheatsheet/:folderId/template', async (req, res) => {
 // ===========================================================================
 router.post('/cheatsheet/:folderId/migrate', async (req, res) => {
   try {
-    const folder = await getFolderOr404(req.params.folderId, res);
+    const folder = await getFolderOr404(req, req.params.folderId, res);
     if (!folder) return;
 
     if (folder.cheat_sheet_json) {
@@ -360,7 +398,7 @@ router.post(
   handwritingUpload.single('image'),
   async (req, res) => {
     try {
-      const folder = await getFolderOr404(req.params.folderId, res);
+      const folder = await getFolderOr404(req, req.params.folderId, res);
       if (!folder) return;
       if (!req.file) return res.status(400).json({ error: 'Image is required' });
 
@@ -438,7 +476,7 @@ router.delete('/cheatsheet/:folderId', async (req, res) => {
 // ===========================================================================
 router.post('/podcast/:folderId', async (req, res) => {
   try {
-    const folder = await getFolderOr404(req.params.folderId, res);
+    const folder = await getFolderOr404(req, req.params.folderId, res);
     if (!folder) return;
 
     if (folder.podcast_audio_url && Array.isArray(folder.podcast_script) && folder.podcast_script.length > 0) {
@@ -449,12 +487,23 @@ router.post('/podcast/:folderId', async (req, res) => {
       });
     }
 
-    const allTexts = await getAllTextsForFolder(folder.id);
+    const allTexts = await getAllTextsForFolder(req, folder.id);
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({ error: 'Không đủ nội dung văn bản để tạo podcast' });
     }
 
-    const script = await generatePodcastScript(allTexts, folder.name);
+    let script;
+    let isMock = false;
+    try {
+      script = await generatePodcastScript(allTexts, folder.name);
+    } catch (error) {
+      console.warn('Podcast generation failed (AI overload), using fallback:', error.message);
+      script = [
+        { speaker: 'MC_A', text: 'Chào bạn, hiện tại máy chủ AI của hệ thống đang bị quá tải nên không thể tạo kịch bản lúc này.' },
+        { speaker: 'MC_B', text: 'Tuy nhiên, bạn vẫn có thể bấm nghe đoạn âm thanh mẫu này để kiểm tra giao diện. Vui lòng chờ 1-2 phút rồi bấm "Tạo lại podcast" nhé!' }
+      ];
+      isMock = true;
+    }
 
     let audioUrl = null;
     try {
@@ -463,14 +512,16 @@ router.post('/podcast/:folderId', async (req, res) => {
       console.log('TTS generation skipped:', e.message);
     }
 
-    await (req.supabase || supabase).from('folders')
-      .update({
-        podcast_script: script,
-        podcast_audio_url: audioUrl || ''
-      })
-      .eq('id', folder.id);
+    if (!isMock) {
+      await (req.supabase || supabase).from('folders')
+        .update({
+          podcast_script: script,
+          podcast_audio_url: audioUrl || ''
+        })
+        .eq('id', folder.id);
+    }
 
-    res.json({ script, audio_url: audioUrl, cached: false });
+    res.json({ script, audio_url: audioUrl, cached: false, isMock });
   } catch (error) {
     console.error('Podcast error:', error);
     res.status(500).json({ error: error.message });
@@ -497,10 +548,10 @@ router.delete('/podcast/:folderId', async (req, res) => {
 // ===========================================================================
 router.post('/recommend/:folderId', async (req, res) => {
   try {
-    const folder = await getFolderOr404(req.params.folderId, res);
+    const folder = await getFolderOr404(req, req.params.folderId, res);
     if (!folder) return;
 
-    const allTexts = await getAllTextsForFolder(folder.id);
+    const allTexts = await getAllTextsForFolder(req, folder.id);
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({ error: 'Không đủ nội dung văn bản để gợi ý tài nguyên' });
     }
@@ -563,10 +614,10 @@ router.post('/suggest-role', protect, async (req, res) => {
     });
 
     const responseText = completion.choices[0]?.message?.content || '';
-    
+
     // Parse suggestions from response
     const suggestions = parseRoleSuggestions(responseText, memberIds, members || []);
-    
+
     res.json({ suggestions, raw_response: responseText });
   } catch (error) {
     console.error('[AI /suggest-role]', error);

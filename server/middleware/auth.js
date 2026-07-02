@@ -17,11 +17,23 @@ async function protect(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const { data: user, error } = await supabase
+    let { data: user, error } = await supabase
       .from('users')
-      .select('id, name, email, school, cohort, avatar_url, created_at, updated_at')
+      .select('id, name, email, username, school, cohort, avatar_url, created_at, updated_at')
       .eq('id', decoded.id || decoded.sub)
       .maybeSingle();
+      
+    // Fallback if 'username' column doesn't exist yet
+    if (error && error.message && error.message.includes('username')) {
+      const fallback = await supabase
+        .from('users')
+        .select('id, name, email, school, cohort, avatar_url, created_at, updated_at')
+        .eq('id', decoded.id || decoded.sub)
+        .maybeSingle();
+      user = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) throw error;
     if (!user) return res.status(401).json({ error: 'Người dùng không tồn tại' });
     

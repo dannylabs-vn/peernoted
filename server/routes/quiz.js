@@ -5,7 +5,7 @@ const { protect } = require('../middleware/auth');
 const { generateQuiz } = require('../services/aiService');
 
 // Helper to get folder texts (copied from ai.js for simplicity, or we could export it)
-async function getAllTextsForFolder(folderId) {
+async function getAllTextsForFolder(req, folderId) {
   const { data, error } = await (req.supabase || supabase).from('files')
     .select('extracted_text')
     .eq('folder_id', folderId);
@@ -32,7 +32,7 @@ router.post('/generate/:folderId', protect, async (req, res) => {
     if (folderErr) throw folderErr;
     if (!folder) return res.status(404).json({ error: 'Thư mục không tồn tại' });
 
-    const allTexts = await getAllTextsForFolder(folderId);
+    const allTexts = await getAllTextsForFolder(req, folderId);
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({ error: 'Không đủ nội dung văn bản để tạo Quiz' });
     }

@@ -7,8 +7,10 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { healthcheck } = require('./config/supabase');
 const authRoutes = require('./routes/auth');
+const friendsRoutes = require('./routes/friends');
 const folderRoutes = require('./routes/folders');
 const fileRoutes = require('./routes/files');
+const { protect } = require('./middleware/auth');
 const aiRoutes = require('./routes/ai');
 const roomRoutes = require('./routes/rooms');
 const channelRoutes = require('./routes/channels');
@@ -59,15 +61,18 @@ app.use('/api/auth/login', strictLimiter);
 app.use('/api/files/upload', strictLimiter);
 app.use('/api/ai/classify', strictLimiter);
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve uploaded files (local fallback storage)
+// Serve static uploads for room files (stored in peernoted/uploads)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use('/api/auth', authRoutes);
-app.use('/api/folders', folderRoutes);
-app.use('/api/files', fileRoutes);
+
+// Protect specific API routes (auth logic is inside);
+app.use('/api/friends', friendsRoutes);
+app.use('/api/folders', protect, folderRoutes);
+app.use('/api/files', protect, fileRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api', channelRoutes);
@@ -90,7 +95,13 @@ setupSocket(io);
 
 // Global Error Handler for uncaught middleware errors (e.g. Multer)
 app.use((err, req, res, next) => {
-  console.error('[Global Error Handler]:', err);
+  console.error('[Global Error Handler]:', err.message || err);
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ error: 'File tải lên vượt quá giới hạn 50MB.' });
+  }
+  if (err.message && err.message.includes('Định dạng file không được hỗ trợ')) {
+    return res.status(400).json({ error: err.message });
+  }
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
