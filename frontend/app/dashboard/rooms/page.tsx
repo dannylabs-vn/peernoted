@@ -55,7 +55,7 @@ export default function RoomListPage() {
         is_public: form.is_public.checked
       })
       setShowCreate(false)
-      router.push(`/dashboard/rooms/${res.id || res._id}`)
+      router.push(`/dashboard/rooms/view?id=${res.id || res._id}`)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message)
     }
@@ -70,7 +70,7 @@ export default function RoomListPage() {
       setShowJoin(false)
       setJoinCode('')
       if (result.room_id) {
-        router.push(`/dashboard/rooms/${result.room_id}`)
+        router.push(`/dashboard/rooms/view?id=${result.room_id}`)
       }
       fetchRooms()
     } catch (err: any) {
@@ -167,7 +167,7 @@ export default function RoomListPage() {
                 <div
                   key={room._id || room.id}
                   onClick={() => {
-                    if (room.is_member) router.push(`/dashboard/rooms/${room._id || room.id}`)
+                    if (room.is_member) router.push(`/dashboard/rooms/view?id=${room._id || room.id}`)
                   }}
                   className={`group border-[3px] border-black rounded-2xl p-4 transition-all h-full flex flex-col ${
                     room.is_member 

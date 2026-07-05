@@ -1,15 +1,18 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { getRoomDetail, getRoomMembers, createChannel, deleteChannel, kickMember, changeMemberRole, updateRoom, deleteRoom, getRoomMessages, getRoomFiles, uploadFiles, deleteRoomFile } from '@/lib/api'
 import { connectSocket, disconnectSocket, joinRoom, leaveRoom, sendMessage, sendTyping } from '@/lib/socket'
 import { Hash, Users, Settings, LogOut, Send, MessageSquare, Plus, X, UserMinus, ShieldAlert, FileText, Settings2, Trash2, Download, Upload } from 'lucide-react'
 
-export default function RoomViewPage() {
-  const params = useParams()
+// Static export (output: 'export') không hỗ trợ dynamic route [id] vì room ID
+// là UUID runtime. Dùng query param /dashboard/rooms/view?id=<uuid> thay thế.
+// useSearchParams cần Suspense boundary khi prerender.
+function RoomViewInner() {
+  const searchParams = useSearchParams()
   const router = useRouter()
-  const roomId = params.id as string
+  const roomId = searchParams.get('id') as string
 
   const [room, setRoom] = useState<any>(null)
   const [channels, setChannels] = useState<any[]>([])
@@ -188,9 +191,11 @@ export default function RoomViewPage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      // We manually construct fetch since uploadFiles from api.ts was for folders
+      // We manually construct fetch since uploadFiles from api.ts was for folders.
+      // Static export không có rewrite /api → phải dùng NEXT_PUBLIC_API_URL như lib/api.ts.
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api'
       const token = localStorage.getItem('token')
-      const res = await fetch(`/api/rooms/${roomId}/files`, {
+      const res = await fetch(`${apiBase}/rooms/${roomId}/files`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
@@ -701,7 +706,7 @@ export default function RoomViewPage() {
                 </button>
                 
                 {myRole === 'owner' && (
-                  <button 
+                  <button
                     type="button"
                     onClick={handleDeleteRoom}
                     className="w-full py-3 bg-white text-[#EA4335] border-[3px] border-[#EA4335] rounded-xl font-black hover:bg-red-50 transition-colors"
@@ -715,5 +720,13 @@ export default function RoomViewPage() {
         </div>
       )}
     </>
+  )
+}
+
+export default function RoomViewPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen text-gray-500">Đang tải phòng học...</div>}>
+      <RoomViewInner />
+    </Suspense>
   )
 }
