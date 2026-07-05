@@ -107,18 +107,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
-const startServer = async () => {
-  try {
-    await healthcheck();
-    console.log('✅ Supabase connected');
-  } catch (err) {
-    console.error(`❌ Supabase Error: ${err.message}`);
-    console.error('   Did you run server/config/supabase-schema.sql in the Supabase SQL editor?');
-    process.exit(1);
-  }
-  server.listen(PORT, () => {
-    console.log(`🚀 PeerNoted Server running on http://localhost:${PORT}`);
-  });
-};
-
-startServer();
+// Bind port NGAY để Render detect được (nếu healthcheck Supabase hang thì
+// server vẫn phải mở port, tránh "Port scan timeout"). Healthcheck chạy sau
+// dạng cảnh báo, không chặn startup.
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 PeerNoted Server running on port ${PORT}`);
+  healthcheck()
+    .then(() => console.log('✅ Supabase connected'))
+    .catch(err => {
+      console.error(`⚠️ Supabase healthcheck failed: ${err.message}`);
+      console.error('   Kiểm tra SUPABASE_URL / SUPABASE_ANON_KEY và đã chạy supabase-schema.sql chưa.');
+    });
+});
