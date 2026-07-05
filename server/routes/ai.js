@@ -167,12 +167,42 @@ router.post('/classify', upload.array('files', 20), async (req, res) => {
 
       // Find folder by case-insensitive name
       const targetName = classification.folder_name.trim();
-      const { data: existing } = await (req.supabase || supabase).from('folders').select('*').ilike('name', targetName).maybeSingle();
+      let { data: existing } = await (req.supabase || supabase).from('folders').select('*').ilike('name', targetName).maybeSingle();
+
+      // Normalize: lowercase + bỏ dấu tiếng Việt để "Ngữ Văn" = "ngữ văn" = "Ngu van"
+      const normalize = (s) => (s || '')
+        .trim().toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/đ/g, 'd');
+
+      // FALLBACK MATCH: nếu không tìm thấy theo tên chính xác, tìm folder có
+      // CÙNG subject + grade (sau normalize). Fix bug "cùng tag Ngữ văn 11
+      // nhưng tách thành 2 folder" khi AI trả folder_name hơi khác nhau
+      // giữa các lần upload.
+      if (!existing && classification.subject) {
+        const { data: allFolders } = await (req.supabase || supabase)
+          .from('folders').select('*');
+        const bySubject = (allFolders || []).filter(f =>
+          normalize(f.subject) === normalize(classification.subject)
+          && normalize(f.grade) === normalize(classification.grade)
+        );
+        if (bySubject.length > 0) {
+          // Ưu tiên folder có chapter tương đồng (chứa nhau sau normalize);
+          // nếu không có, lấy folder cùng subject+grade mới cập nhật gần nhất.
+          const chapNorm = normalize(classification.chapter);
+          const chapterMatch = bySubject.find(f => {
+            const fc = normalize(f.chapter);
+            return fc && chapNorm && (fc.includes(chapNorm) || chapNorm.includes(fc));
+          });
+          existing = chapterMatch
+            || bySubject.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+          console.log(`[Classify] Fallback merge: "${targetName}" → folder có sẵn "${existing.name}" (cùng subject+grade)`);
+        }
+      }
 
       // Safety check: if AI returned an existing folder name but the subject
       // doesn't match, refuse the merge and create a fresh folder instead.
       // This prevents cross-subject grouping (e.g. Tin học into Hóa học).
-      const normalize = (s) => (s || '').trim().toLowerCase();
       const subjectsMatch = existing
         && normalize(existing.subject) === normalize(classification.subject);
 

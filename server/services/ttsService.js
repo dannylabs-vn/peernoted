@@ -89,6 +89,23 @@ async function uploadAudioBuffer(buffer, filename) {
   return `/uploads/audio/${filename}`;
 }
 
+// Chạy tasks với giới hạn số lượng đồng thời. Sequential TTS 20 câu mất
+// 60-120s → vượt HTTP timeout ~100s của Render free tier → podcast "lúc được
+// lúc không" dù script luôn tạo tốt. Parallel concurrency=4 giảm còn 15-30s.
+// Không parallel hết 100% vì Edge TTS free endpoint sẽ rate-limit.
+async function runWithConcurrency(tasks, limit = 4) {
+  const results = new Array(tasks.length);
+  let next = 0;
+  async function worker() {
+    while (next < tasks.length) {
+      const i = next++;
+      results[i] = await tasks[i]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return results;
+}
+
 async function generatePodcastAudio(script, language = 'vi') {
   if (!script || script.length === 0) {
     console.log('[TTS] Empty script, skipping');
@@ -98,22 +115,24 @@ async function generatePodcastAudio(script, language = 'vi') {
   const voices = language === 'en' ? VOICES_EN : VOICES;
   const outputFileName = `podcast_${uuidv4()}.mp3`;
 
-  console.log(`[TTS] Generating ${script.length} lines...`);
-  const buffers = [];
+  const lines = script.filter(l => l.text && l.text.trim().length > 0);
+  console.log(`[TTS] Generating ${lines.length} lines (concurrency=4)...`);
+  const t0 = Date.now();
 
   try {
-    for (let i = 0; i < script.length; i++) {
-      const { speaker, text } = script[i];
-      if (!text || text.trim().length === 0) continue;
-      const voice = voices[speaker] || voices.MC_A;
-      const buf = await generateChunk(text, voice, null);
-      buffers.push(buf);
-    }
+    // Mỗi task giữ đúng index để concat theo thứ tự kịch bản
+    const tasks = lines.map(({ speaker, text }) => () =>
+      generateChunk(text, voices[speaker] || voices.MC_A, null)
+    );
+    const buffers = (await runWithConcurrency(tasks, 4)).filter(Boolean);
 
     if (buffers.length === 0) throw new Error('No audio buffers generated');
+    if (buffers.length < lines.length) {
+      console.warn(`[TTS] ${lines.length - buffers.length}/${lines.length} chunks failed — audio sẽ thiếu vài câu`);
+    }
 
     const finalBuffer = Buffer.concat(buffers);
-    console.log(`[TTS] Total ${(finalBuffer.length / 1024).toFixed(1)} KB`);
+    console.log(`[TTS] Total ${(finalBuffer.length / 1024).toFixed(1)} KB in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
     return await uploadAudioBuffer(finalBuffer, outputFileName);
   } catch (error) {
     console.error('[TTS] Podcast generation failed:', error.message);
