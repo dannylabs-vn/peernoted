@@ -84,3 +84,41 @@ export function sendTyping(roomId: string, channelId: string, isTyping: boolean)
     socket.emit('typing', { roomId, channelId, isTyping });
   }
 }
+
+// ===== PvP QUIZ BATTLE =====
+export function battleCreate(roomId: string, folderId: string, timePerQ = 15): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if (!socket?.connected) return reject(new Error('Socket chưa kết nối'));
+    socket.emit('battle-create', { roomId, folderId, timePerQ }, (res: any) => {
+      if (!res?.ok) return reject(new Error(res?.error || 'Không tạo được trận'));
+      resolve(res);
+    });
+  });
+}
+
+export function battleJoin(battleId: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if (!socket?.connected) return reject(new Error('Socket chưa kết nối'));
+    socket.emit('battle-join', { battleId }, (res: any) => {
+      if (!res?.ok) return reject(new Error(res?.error || 'Không join được trận'));
+      resolve(res);
+    });
+  });
+}
+
+export function battleStart(battleId: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if (!socket?.connected) return reject(new Error('Socket chưa kết nối'));
+    socket.emit('battle-start', { battleId }, (res: any) => {
+      if (!res?.ok) return reject(new Error(res?.error || 'Không bắt đầu được'));
+      resolve(res);
+    });
+  });
+}
+
+export function battleAnswer(battleId: string, index: number, answer: string): Promise<any> {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve({ ok: false });
+    socket.emit('battle-answer', { battleId, index, answer }, (res: any) => resolve(res || { ok: false }));
+  });
+}

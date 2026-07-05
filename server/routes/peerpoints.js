@@ -56,8 +56,11 @@ router.post('/peerpoints/award', protect, async (req, res) => {
       return res.status(403).json({ error: 'Ban khong co quyen tang diem' });
     }
 
+    // supabase-js v2 KHÔNG có supabase.raw() → đọc điểm hiện tại rồi cộng.
+    const { data: cur } = await (req.supabase || supabase).from('room_members')
+      .select('peer_points').eq('room_id', room_id).eq('user_id', user_id).maybeSingle();
     const { data: member, error } = await (req.supabase || supabase).from('room_members')
-      .update({ peer_points: supabase.raw(`peer_points + ${points}`) })
+      .update({ peer_points: ((cur && cur.peer_points) || 0) + points })
       .eq('room_id', room_id)
       .eq('user_id', user_id)
       .select('*')
@@ -127,9 +130,9 @@ router.post('/rewards/unlock', protect, async (req, res) => {
       return res.status(400).json({ error: 'Ban da mo khoa reward nay roi' });
     }
 
-    // Calculate total points
+    // Calculate total points (cần cả id để trừ điểm sau này)
     const { data: memberships } = await (req.supabase || supabase).from('room_members')
-      .select('peer_points')
+      .select('id, peer_points')
       .eq('user_id', req.user.id);
     const totalPoints = (memberships || []).reduce((sum, m) => sum + (m.peer_points || 0), 0);
 
@@ -139,16 +142,15 @@ router.post('/rewards/unlock', protect, async (req, res) => {
       });
     }
 
-    // Deduct from all memberships proportionally
-    const pointsToDeduct = Math.min(totalPoints, reward.cost);
-    let remaining = pointsToDeduct;
-
+    // Deduct from memberships. supabase-js v2 KHÔNG có supabase.raw() → phải
+    // đọc giá trị hiện tại rồi update con số cụ thể.
+    let remaining = Math.min(totalPoints, reward.cost);
     for (const m of (memberships || [])) {
       if (remaining <= 0) break;
       const deductFromThis = Math.min(m.peer_points || 0, remaining);
       if (deductFromThis > 0) {
         await (req.supabase || supabase).from('room_members')
-          .update({ peer_points: supabase.raw(`peer_points - ${deductFromThis}`) })
+          .update({ peer_points: (m.peer_points || 0) - deductFromThis })
           .eq('id', m.id);
         remaining -= deductFromThis;
       }

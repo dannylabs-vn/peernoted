@@ -33,6 +33,20 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 1
 // ===========================================================================
 // POST /api/rooms/:roomId/files — Upload file to room
 // ===========================================================================
+
+// Auto-award PeerPoints khi đóng góp tài liệu cho phòng (best-effort, không chặn response)
+async function awardUploadPoints(roomId, userId, points = 5) {
+  try {
+    const { data: member } = await supabase.from('room_members')
+      .select('id, peer_points').eq('room_id', roomId).eq('user_id', userId).maybeSingle();
+    if (member) {
+      await supabase.from('room_members')
+        .update({ peer_points: (member.peer_points || 0) + points })
+        .eq('id', member.id);
+    }
+  } catch (e) { console.warn('[Award upload]', e.message); }
+}
+
 router.post('/rooms/:roomId/files', protect, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Vui long chon file' });
@@ -78,6 +92,7 @@ router.post('/rooms/:roomId/files', protect, upload.single('file'), async (req, 
         throw error;
       }
     }
+    awardUploadPoints(req.params.roomId, req.user.id, 5);
     res.status(201).json(toApi(roomFile));
   } catch (error) {
     console.error('[RoomFiles /upload]', error);

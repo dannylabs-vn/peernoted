@@ -327,6 +327,33 @@ async function generateQuiz(allTexts, folderName = '') {
   }
 }
 
+// PeerBot — trợ giảng AI trong phòng học. Trả về plain text (chat message),
+// không cần structured output.
+async function answerRoomQuestion(question, contextTexts = '', roomName = '') {
+  const completion = await getClient().chat.completions.create({
+    model: TEXT_MODEL,
+    max_tokens: 1000,
+    messages: [
+      { role: 'system', content: 'Bạn là PeerBot — trợ giảng AI thân thiện, trả lời ngắn gọn đúng trọng tâm bằng tiếng Việt.' },
+      { role: 'user', content: PROMPTS.roomChatAssistant(question, contextTexts, roomName) }
+    ]
+  });
+  return completion.choices[0].message.content;
+}
+
+// Gia sư "Vá lỗi" — phân tích điểm yếu từ quiz stats + mô tả của user,
+// trả roadmap 4 tuần structured.
+async function generateTutorRoadmap(statsSummary, userNote = '') {
+  return chatJSON({
+    model: TEXT_MODEL,
+    schema: SCHEMAS.TUTOR_ROADMAP_SCHEMA,
+    messages: [
+      { role: 'system', content: 'Bạn là gia sư AI cá nhân. Trả về theo schema JSON đã định nghĩa.' },
+      { role: 'user', content: PROMPTS.tutorRoadmap(statsSummary, userNote) }
+    ]
+  });
+}
+
 module.exports = {
   classifyFromText,
   classifyFromImage,
@@ -335,5 +362,7 @@ module.exports = {
   generatePodcastScript,
   analyzeHandwriting,
   generateResourceRecommendations,
-  generateQuiz
+  generateQuiz,
+  answerRoomQuestion,
+  generateTutorRoadmap
 };

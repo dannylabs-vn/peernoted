@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { LayoutDashboard, FolderOpen, LifeBuoy, Headphones, MessageSquare, Users, Repeat, Settings, Moon } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, LifeBuoy, Headphones, MessageSquare, Users, Repeat, Settings, Moon, Target, Gift, Stethoscope } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const NAV_ITEMS = [
@@ -11,10 +11,13 @@ const NAV_ITEMS = [
   { href: '/dashboard/library', label: '02 Thư viện tri thức', icon: FolderOpen },
   { href: '/dashboard/cheatsheets', label: '03 Phao cứu cấp', icon: LifeBuoy },
   { href: '/dashboard/podcasts', label: '04 Podcast học tập', icon: Headphones },
-  { href: '/dashboard/forum', label: '05 Diễn đàn chia sẻ', icon: MessageSquare },
-  { href: '/dashboard/rooms', label: '06 Phòng Học', icon: Users },
-  { href: '/dashboard/spaced-repetition', label: '07 Ôn tập (Cứu trợ)', icon: Repeat },
-  { href: '/dashboard/settings', label: '08 Cài đặt', icon: Settings },
+  { href: '/dashboard/quiz', label: '05 Luyện Quiz', icon: Target },
+  { href: '/dashboard/tutor', label: '06 Vá lỗi (Gia sư AI)', icon: Stethoscope },
+  { href: '/dashboard/forum', label: '07 Diễn đàn chia sẻ', icon: MessageSquare },
+  { href: '/dashboard/rooms', label: '08 Phòng Học', icon: Users },
+  { href: '/dashboard/rewards', label: '09 Cửa hàng PeerPoint', icon: Gift },
+  { href: '/dashboard/spaced-repetition', label: '10 Ôn tập (Cứu trợ)', icon: Repeat },
+  { href: '/dashboard/settings', label: '11 Cài đặt', icon: Settings },
 ];
 
 export function Sidebar() {

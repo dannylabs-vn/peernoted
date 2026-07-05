@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { getRoomDetail, getRoomMembers, createChannel, deleteChannel, kickMember, changeMemberRole, updateRoom, deleteRoom, getRoomMessages, getRoomFiles, uploadFiles, deleteRoomFile } from '@/lib/api'
 import { connectSocket, disconnectSocket, joinRoom, leaveRoom, sendMessage, sendTyping } from '@/lib/socket'
 import { Hash, Users, Settings, LogOut, Send, MessageSquare, Plus, X, UserMinus, ShieldAlert, FileText, Settings2, Trash2, Download, Upload } from 'lucide-react'
+import BattlePanel from '@/components/BattlePanel'
 
 // Static export (output: 'export') không hỗ trợ dynamic route [id] vì room ID
 // là UUID runtime. Dùng query param /dashboard/rooms/view?id=<uuid> thay thế.
@@ -448,7 +449,7 @@ function RoomViewInner() {
         <form onSubmit={handleSend} className="p-4 border-t-[3px] border-black bg-white flex gap-3">
           <input
             type="text"
-            placeholder={`Nhắn tin trong #${activeChannel?.name || 'tán_gẫu'}...`}
+            placeholder={`Nhắn tin trong #${activeChannel?.name || 'tán_gẫu'}... (gõ @AI để hỏi PeerBot 🤖)`}
             value={input}
             onChange={handleInputChange}
             className="flex-1 px-4 py-3 bg-gray-50 border-[3px] border-black rounded-xl font-bold focus:outline-none focus:ring-4 focus:ring-[#10B981]/20 shadow-[inset_2px_2px_0px_0px_rgba(0,0,0,0.1)]"
@@ -463,8 +464,12 @@ function RoomViewInner() {
         </form>
       </div>
 
-      {/* Right Sidebar: Members */}
-      <div className="w-64 bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex-shrink-0">
+      {/* Right Sidebar: PvP Battle + Members */}
+      <div className="w-64 flex flex-col gap-4 flex-shrink-0 overflow-y-auto">
+        {/* PvP Quiz Battle */}
+        {roomId && myUserId && <BattlePanel roomId={roomId} myUserId={myUserId} />}
+
+      <div className="bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
         <div className="p-4 border-b-[3px] border-black flex items-center justify-between">
           <h3 className="font-black flex items-center gap-2"><Users className="w-5 h-5"/> Thành viên</h3>
           <span className="bg-[#9B51E0] text-white text-xs font-black px-2 py-1 rounded-md border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
@@ -517,6 +522,7 @@ function RoomViewInner() {
             <FileText className="w-4 h-4" /> Quản lý tài liệu
           </button>
         </div>
+      </div>
       </div>
 
     </div>

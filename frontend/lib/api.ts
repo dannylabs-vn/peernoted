@@ -151,4 +151,10 @@ export const getDirectMessages = (friendId: string) => API.get(`/friends/message
 export const sendDirectMessage = (friendId: string, content: string) => 
   API.post(`/friends/messages/${friendId}`, { content }).then(r => r.data);
 
+
+// ===== TUTOR (Vá lỗi — gia sư AI cá nhân) =====
+export const getTutorAnalysis = () => API.get('/tutor/analysis').then(r => r.data);
+export const generateTutorRoadmap = (userNote: string = '') =>
+  API.post('/tutor/roadmap', { user_note: userNote }).then(r => r.data);
+
 export default API;

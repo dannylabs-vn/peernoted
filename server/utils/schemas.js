@@ -166,11 +166,54 @@ const QUIZ_SCHEMA = {
   }
 };
 
+
+const TUTOR_ROADMAP_SCHEMA = {
+  name: 'tutor_roadmap',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['summary', 'weaknesses', 'roadmap', 'tips'],
+    properties: {
+      summary: { type: 'string' },
+      weaknesses: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['topic', 'severity', 'evidence'],
+          properties: {
+            topic: { type: 'string' },
+            severity: { type: 'string', enum: ['cao', 'trung bình', 'thấp'] },
+            evidence: { type: 'string' }
+          }
+        }
+      },
+      roadmap: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['week', 'focus', 'actions', 'goal'],
+          properties: {
+            week: { type: 'integer' },
+            focus: { type: 'string' },
+            actions: { type: 'array', items: { type: 'string' } },
+            goal: { type: 'string' }
+          }
+        }
+      },
+      tips: { type: 'array', items: { type: 'string' } }
+    }
+  }
+};
+
 module.exports = {
   CHEAT_SHEET_SCHEMA,
   CLASSIFY_SCHEMA,
   PODCAST_SCRIPT_SCHEMA,
   HANDWRITING_SCHEMA,
   RECOMMENDATIONS_SCHEMA,
-  QUIZ_SCHEMA
+  QUIZ_SCHEMA,
+  TUTOR_ROADMAP_SCHEMA
 };
