@@ -3,7 +3,7 @@
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { Header } from '@/components/dashboard/header';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function DashboardLayout({
   children,
@@ -12,6 +12,12 @@ export default function DashboardLayout({
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Tự đóng sidebar mobile khi chuyển trang (tránh menu che nội dung sau khi bấm nav)
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   // Protect route and verify token
   useEffect(() => {
@@ -57,7 +63,7 @@ export default function DashboardLayout({
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
         <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-y-auto bg-[#F8F9FA] p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto bg-[#F8F9FA] p-3 sm:p-4 md:p-6">
           {children}
         </main>
       </div>

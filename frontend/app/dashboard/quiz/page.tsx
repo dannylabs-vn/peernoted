@@ -199,11 +199,11 @@ export default function QuizPage() {
   if (phase === 'error') {
     return (
       <div className="max-w-[700px] mx-auto pt-12 px-4">
-        <div className="bg-white border-[4px] border-black rounded-3xl p-10 text-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="bg-white border-[4px] border-black rounded-3xl p-6 sm:p-10 text-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
           <div className="w-20 h-20 bg-[#EA4335] border-[4px] border-black rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <AlertTriangle className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-black mb-3">Rất tiếc, AI chưa soạn được đề 😢</h1>
+          <h1 className="text-2xl sm:text-3xl font-black mb-3">Rất tiếc, AI chưa soạn được đề 😢</h1>
           <p className="font-bold text-gray-600 mb-8">
             Có thể tài liệu trong thư mục này quá ngắn hoặc hệ thống đang bận.
             Bạn thử lại hoặc chọn một thư mục khác nhé!
@@ -521,13 +521,13 @@ export default function QuizPage() {
   return (
     <div className="max-w-[1200px] mx-auto pb-12">
       {/* Header */}
-      <div className="bg-[#4285F4] border-[4px] border-black rounded-3xl p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden mb-8">
+      <div className="bg-[#4285F4] border-[4px] border-black rounded-3xl p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden mb-8">
         <div className="absolute -right-6 -top-6 w-40 h-40 bg-[#FBBC05]/30 rounded-full" />
         <div className="relative z-10">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider bg-white text-[#4285F4] w-fit px-3 py-1 rounded-lg border-[2px] border-black mb-4">
             <Sparkles className="w-4 h-4" /> AI Quiz
           </div>
-          <h1 className="text-4xl sm:text-5xl font-black mb-3" style={{ textShadow: '3px 3px 0px #000' }}>
+          <h1 className="text-3xl sm:text-5xl font-black mb-3" style={{ textShadow: '3px 3px 0px #000' }}>
             Luyện Quiz 🎯
           </h1>
           <p className="text-lg font-bold bg-white text-black inline-block px-4 py-2 border-[2px] border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">

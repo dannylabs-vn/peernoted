@@ -43,9 +43,9 @@ export default function PodcastsPage() {
         </div>
       </div>
 
-      <div className="bg-[#9B51E0] border-[3px] border-black rounded-2xl p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden mb-6">
+      <div className="bg-[#9B51E0] border-[3px] border-black rounded-2xl p-6 md:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden mb-6">
         <div className="relative z-10 max-w-2xl">
-          <h2 className="text-3xl md:text-4xl font-black mb-4 leading-tight" style={{ textShadow: "3px 3px 0px #000" }}>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-4 leading-tight" style={{ textShadow: "3px 3px 0px #000" }}>
             Biến tài liệu khô khan thành podcast sinh động
           </h2>
           <p className="text-lg font-bold bg-white text-black inline-block px-4 py-2 border-[2px] border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">

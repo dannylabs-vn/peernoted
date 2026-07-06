@@ -177,7 +177,7 @@ export default function RewardsPage() {
             <Store className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-black">Cửa Hàng PeerPoint 🎁</h1>
+            <h1 className="text-2xl sm:text-3xl font-black">Cửa Hàng PeerPoint 🎁</h1>
             <p className="text-gray-500 font-bold">Đổi điểm lấy phần thưởng độc quyền</p>
           </div>
         </div>

@@ -20,30 +20,30 @@ export function Header({ onMenuClick }: HeaderProps) {
   else if (pathname.includes('/settings')) pageTitle = 'Cài đặt';
 
   return (
-    <header className="h-16 bg-white border-b-[3px] border-black flex items-center justify-between px-6 flex-shrink-0 relative z-10 shadow-[0px_2px_0px_0px_rgba(0,0,0,1)]">
-      <div className="flex items-center gap-4 flex-1">
-        <button 
+    <header className="h-16 bg-white border-b-[3px] border-black flex items-center justify-between px-3 md:px-6 flex-shrink-0 relative z-10 shadow-[0px_2px_0px_0px_rgba(0,0,0,1)]">
+      <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+        <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 bg-white border-[2px] border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
+          className="lg:hidden p-2 bg-white border-[2px] border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex-shrink-0"
         >
           <Menu className="w-5 h-5" strokeWidth={2.5} />
         </button>
-        
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">
+
+        <div className="min-w-0">
+          <div className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">
             WORKSPACE / {pageTitle.toUpperCase()}
           </div>
-          <h1 className="text-lg font-black">{pageTitle}</h1>
+          <h1 className="text-base md:text-lg font-black truncate">{pageTitle}</h1>
         </div>
       </div>
-      
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="hidden md:flex items-center border-[2px] border-black rounded-xl px-3 py-1.5 bg-[#F8F9FA]">
+
+      <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+        {/* Search — chỉ desktop */}
+        <div className="hidden lg:flex items-center border-[2px] border-black rounded-xl px-3 py-1.5 bg-[#F8F9FA]">
           <Search className="w-4 h-4 text-gray-400 mr-2" />
-          <input 
-            type="text" 
-            placeholder="Tìm tài liệu, môn học..." 
+          <input
+            type="text"
+            placeholder="Tìm tài liệu, môn học..."
             className="bg-transparent border-none outline-none text-sm w-48 font-bold placeholder-gray-400 text-black"
           />
           <div className="flex items-center justify-center bg-white border-[2px] border-black rounded-lg px-1.5 py-0.5 ml-2 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
@@ -52,14 +52,14 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
 
         {/* Notifications */}
-        <button className="p-2 border-[2px] border-black rounded-xl bg-white hover:bg-gray-50 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+        <button className="p-2 border-[2px] border-black rounded-xl bg-white hover:bg-gray-50 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex-shrink-0">
           <Bell className="w-4 h-4" />
         </button>
 
-        {/* Action Button */}
-        <button className="flex items-center gap-2 px-4 py-2 bg-[#0B0B0B] text-white border-[2px] border-black rounded-xl font-bold text-sm hover:bg-[#1a1a1a] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all">
+        {/* Action Button — mobile ẩn chữ, chỉ icon */}
+        <button className="flex items-center gap-2 px-3 md:px-4 py-2 bg-[#0B0B0B] text-white border-[2px] border-black rounded-xl font-bold text-sm hover:bg-[#1a1a1a] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all flex-shrink-0">
           <Plus className="w-4 h-4" strokeWidth={3} />
-          Tải tài liệu
+          <span className="hidden sm:inline">Tải tài liệu</span>
         </button>
       </div>
     </header>

@@ -178,7 +178,7 @@ export default function OverviewPage() {
     <div className="max-w-[1400px] mx-auto space-y-6 pb-10">
       
       {/* Top Action Bar */}
-      <div className="flex justify-between items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+      <div className="flex flex-wrap justify-between items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
         <div className="flex items-center gap-2 text-[#3C73ED]">
           <Sparkles className="w-4 h-4" />
           SMART ORGANIZER - ACTIVE
@@ -191,7 +191,7 @@ export default function OverviewPage() {
       {/* Welcome Section with Sun */}
       <div className="bg-[#1C92FF] border-[3px] border-black rounded-2xl p-8 md:p-10 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden mb-6">
         <div className="relative z-10 max-w-2xl">
-          <h2 className="text-3xl md:text-4xl font-black mb-4 leading-tight" style={{ textShadow: "3px 3px 0px #000" }}>
+          <h2 className="text-2xl md:text-4xl font-black mb-4 leading-tight" style={{ textShadow: "3px 3px 0px #000" }}>
             Chào mừng trở lại, {user?.name}!
           </h2>
           <p className="text-lg font-bold bg-white text-black inline-block px-4 py-2 border-[2px] border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform -rotate-1">
@@ -217,7 +217,7 @@ export default function OverviewPage() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`w-full bg-white border-[3px] border-dashed rounded-3xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors relative ${
+        className={`w-full bg-white border-[3px] border-dashed rounded-3xl p-8 md:p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors relative ${
           isDragging ? 'border-[#3C73ED] bg-[#E8F0FE]' : 'border-gray-300 hover:border-black hover:bg-gray-50'
         }`}
       >
@@ -241,7 +241,7 @@ export default function OverviewPage() {
       </label>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white border-[2px] border-black p-5 rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all cursor-default">
           <div className="text-[10px] font-black uppercase text-gray-500 mb-2">TÀI LIỆU</div>
           <div className="text-3xl font-black mb-1">{stats.files}</div>

@@ -80,13 +80,13 @@ export default function RoomListPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto pb-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 bg-[#FFC224] border-[3px] border-black p-8 rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 bg-[#FFC224] border-[3px] border-black p-6 md:p-8 rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
         <div>
           <div className="inline-flex items-center gap-2 bg-white text-black px-4 py-2 border-[2px] border-black rounded-full font-black text-sm mb-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             <BookOpen className="w-4 h-4 text-[#9B51E0]" />
             WORKSPACE
           </div>
-          <h1 className="text-4xl md:text-5xl font-black mb-2" style={{ textShadow: "3px 3px 0px #fff" }}>Trung Tâm Kết Nối</h1>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black mb-2" style={{ textShadow: "3px 3px 0px #fff" }}>Trung Tâm Kết Nối</h1>
           <p className="text-lg font-bold bg-white text-black px-3 py-1 rounded-md border-[2px] border-black inline-block shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             Học tập nhóm và giao tiếp với bạn bè
           </p>
@@ -111,23 +111,23 @@ export default function RoomListPage() {
       <div className="flex gap-4 mb-8">
         <button
           onClick={() => setActiveTab('rooms')}
-          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 border-[4px] border-black rounded-2xl font-black text-lg transition-all ${
+          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-8 py-3 md:py-4 border-[4px] border-black rounded-2xl font-black text-sm md:text-lg transition-all ${
             activeTab === 'rooms'
               ? 'bg-[#9B51E0] text-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] scale-105'
               : 'bg-white text-black hover:bg-gray-100'
           }`}
         >
-          <BookOpen className="w-6 h-6" /> Các Phòng Học
+          <BookOpen className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" /> Các Phòng Học
         </button>
         <button
           onClick={() => setActiveTab('friends')}
-          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 border-[4px] border-black rounded-2xl font-black text-lg transition-all ${
+          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-8 py-3 md:py-4 border-[4px] border-black rounded-2xl font-black text-sm md:text-lg transition-all ${
             activeTab === 'friends'
               ? 'bg-[#10B981] text-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] scale-105'
               : 'bg-white text-black hover:bg-gray-100'
           }`}
         >
-          <UserCheck className="w-6 h-6" /> Bạn Bè & Tin Nhắn
+          <UserCheck className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" /> Bạn Bè & Tin Nhắn
         </button>
       </div>
 
@@ -217,7 +217,7 @@ export default function RoomListPage() {
       {/* Modals */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95">
+          <div className="bg-white w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95">
             <div className="p-6 border-b-[4px] border-black bg-[#9B51E0] text-white flex justify-between items-center">
               <h3 className="text-2xl font-black">Tạo Phòng Mới</h3>
               <button onClick={() => setShowCreate(false)} className="w-8 h-8 bg-white border-[2px] border-black rounded-full text-black flex items-center justify-center font-black hover:bg-gray-100 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"><X className="w-4 h-4"/></button>
@@ -256,7 +256,7 @@ export default function RoomListPage() {
 
       {showJoin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95">
+          <div className="bg-white w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95">
             <div className="p-6 border-b-[4px] border-black bg-[#3C73ED] text-white flex justify-between items-center">
               <h3 className="text-2xl font-black">Tham Gia Phòng</h3>
               <button onClick={() => setShowJoin(false)} className="w-8 h-8 bg-white border-[2px] border-black rounded-full text-black flex items-center justify-center font-black hover:bg-gray-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"><X className="w-4 h-4"/></button>
@@ -274,7 +274,7 @@ export default function RoomListPage() {
                 onChange={e => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={8}
                 autoFocus
-                className="w-full text-center text-3xl tracking-[0.5em] px-4 py-4 bg-white border-[3px] border-black rounded-xl font-black uppercase focus:outline-none focus:ring-4 focus:ring-[#3C73ED]/20 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,0.1)]" 
+                className="w-full text-center text-2xl sm:text-3xl tracking-[0.3em] sm:tracking-[0.5em] px-4 py-4 bg-white border-[3px] border-black rounded-xl font-black uppercase focus:outline-none focus:ring-4 focus:ring-[#3C73ED]/20 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,0.1)]"
                 placeholder="XXXXXX" 
               />
               <button type="submit" className="w-full px-6 py-4 bg-[#FFC224] text-black border-[3px] border-black rounded-xl font-black text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)] transition-all">

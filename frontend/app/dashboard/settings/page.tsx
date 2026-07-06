@@ -132,7 +132,7 @@ export default function SettingsPage() {
           <Settings2 className="w-8 h-8 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-black">Cài đặt Tài khoản</h1>
+          <h1 className="text-2xl sm:text-3xl font-black">Cài đặt Tài khoản</h1>
           <p className="text-gray-500 font-bold">Quản lý thông tin và gói dịch vụ của bạn</p>
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function SettingsPage() {
         
         {/* Profile Info */}
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-white border-[3px] border-black rounded-3xl p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          <div className="bg-white border-[3px] border-black rounded-3xl p-6 md:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
             <h2 className="text-xl font-black mb-6 flex items-center gap-2 border-b-[3px] border-black pb-4">
               <User className="w-6 h-6 text-[#9B51E0]" /> Thông tin cá nhân
             </h2>
@@ -173,7 +173,7 @@ export default function SettingsPage() {
                 <div className="flex flex-col mb-4">
                   <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1">Họ và tên</label>
                   <div className="flex items-end gap-3 flex-wrap">
-                    <div className="font-black text-3xl">{user.name}</div>
+                    <div className="font-black text-2xl sm:text-3xl">{user.name}</div>
                     {user.username && (
                       <div 
                         onClick={() => { navigator.clipboard.writeText(user.username); alert('Đã copy ID!'); }}
@@ -203,7 +203,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-white border-[3px] border-black rounded-3xl p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          <div className="bg-white border-[3px] border-black rounded-3xl p-6 md:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
             <h2 className="text-xl font-black mb-6 flex items-center gap-2 border-b-[3px] border-black pb-4">
               <Shield className="w-6 h-6 text-[#10B981]" /> Bảo mật & Tùy chọn
             </h2>
@@ -309,7 +309,7 @@ export default function SettingsPage() {
               </button>
             </div>
             
-            <div className="relative w-full h-[400px] bg-black">
+            <div className="relative w-full h-[300px] sm:h-[400px] bg-black">
               <Cropper
                 image={cropImageSrc}
                 crop={crop}

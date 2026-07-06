@@ -13,7 +13,7 @@ export function HeroSection({ onStartClick, onContactClick }: HeroSectionProps) 
     <section className="container mx-auto px-4 py-16 md:py-24">
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
-          <h1 className="text-[42px] leading-[50px] md:text-[72px] font-bold md:leading-[85px]">
+          <h1 className="text-[34px] leading-[42px] sm:text-[42px] sm:leading-[50px] md:text-[72px] font-bold md:leading-[85px]">
             Nâng tầm <span className="bg-[#FF6B7A] text-white px-3 py-1 inline-block">tri thức</span> bằng{" "}
             <span className="bg-[#2F81F7] text-white px-3 py-1 inline-block">trí tuệ nhân tạo.</span>
           </h1>

@@ -287,20 +287,20 @@ export default function ForumPage() {
       
       {/* Notifications */}
       {notification && (
-        <div className="fixed bottom-8 right-8 z-50 bg-[#FFC224] border-[3px] border-black rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-          <Star className="w-6 h-6 text-black fill-black" />
-          <span className="font-bold text-lg">{notification.message}</span>
+        <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-8 sm:right-8 sm:max-w-md z-50 bg-[#FFC224] border-[3px] border-black rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <Star className="w-6 h-6 text-black fill-black flex-shrink-0" />
+          <span className="font-bold text-base sm:text-lg">{notification.message}</span>
         </div>
       )}
 
       {/* Top Banner & Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-[#9B51E0] border-[3px] border-black rounded-2xl p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] text-white flex flex-col justify-center">
+        <div className="lg:col-span-2 bg-[#9B51E0] border-[3px] border-black rounded-2xl p-6 md:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] text-white flex flex-col justify-center">
           <div className="inline-flex items-center gap-2 bg-white text-black px-4 py-2 border-[2px] border-black rounded-full font-black text-sm mb-4 w-fit shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             <span className="w-2 h-2 rounded-full bg-[#EA4335] animate-pulse" />
             DIỄN ĐÀN CỘNG ĐỒNG
           </div>
-          <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight" style={{ textShadow: "3px 3px 0px #000" }}>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4 leading-tight" style={{ textShadow: "3px 3px 0px #000" }}>
             Chia sẻ tri thức<br />Vượt qua kỳ thi
           </h1>
           <p className="text-lg font-bold bg-white text-black px-4 py-2 rounded-xl border-[2px] border-black inline-block shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
@@ -332,7 +332,7 @@ export default function ForumPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
         {/* Sidebar Filters */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-6 order-2 lg:order-1">
           <div className="bg-white border-[3px] border-black rounded-2xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <h3 className="font-black text-lg mb-4 uppercase">Phân loại</h3>
             <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
@@ -381,7 +381,7 @@ export default function ForumPage() {
         </div>
 
         {/* Feed */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-6 order-1 lg:order-2">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />

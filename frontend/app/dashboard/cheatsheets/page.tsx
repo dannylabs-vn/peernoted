@@ -44,7 +44,7 @@ export default function CheatsheetsPage() {
         </div>
       </div>
 
-      <div className="bg-[#EA4335] border-[3px] border-black rounded-2xl p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden mb-6">
+      <div className="bg-[#EA4335] border-[3px] border-black rounded-2xl p-6 md:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden mb-6">
         <div className="relative z-10 max-w-2xl">
           <h2 className="text-3xl md:text-4xl font-black mb-4 leading-tight" style={{ textShadow: "3px 3px 0px #000" }}>
             Phao Cứu Cấp

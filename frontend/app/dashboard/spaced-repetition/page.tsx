@@ -109,11 +109,11 @@ export default function SpacedRepetitionPage() {
   if (isDone || items.length === 0) {
     return (
       <div className="max-w-[800px] mx-auto pt-10">
-        <div className="bg-[#10B981] border-[4px] border-black rounded-3xl p-12 text-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-white">
+        <div className="bg-[#10B981] border-[4px] border-black rounded-3xl p-8 sm:p-12 text-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-white">
           <div className="w-24 h-24 bg-white border-[4px] border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <Trophy className="w-12 h-12 text-[#FFC224]" />
           </div>
-          <h1 className="text-5xl font-black mb-4" style={{ textShadow: "3px 3px 0px #000" }}>Hoàn Thành!</h1>
+          <h1 className="text-4xl sm:text-5xl font-black mb-4" style={{ textShadow: "3px 3px 0px #000" }}>Hoàn Thành!</h1>
           <p className="text-xl font-bold bg-white text-black px-6 py-3 rounded-xl border-[3px] border-black inline-block shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-8">
             Bạn đã ôn tập xong tất cả lỗ hổng kiến thức hôm nay.
           </p>
@@ -137,7 +137,7 @@ export default function SpacedRepetitionPage() {
             <Brain className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-black">Cứu trợ / Ôn tập</h1>
+            <h1 className="text-2xl sm:text-3xl font-black">Cứu trợ / Ôn tập</h1>
             <p className="text-gray-500 font-bold">Spaced Repetition & Active Recall</p>
           </div>
         </div>
@@ -150,16 +150,16 @@ export default function SpacedRepetitionPage() {
       {/* Main Card */}
       <div className="relative">
         {/* Background decorative cards for depth */}
-        <div className="absolute inset-0 bg-[#FFC224] border-[4px] border-black rounded-3xl translate-x-4 translate-y-4" />
+        <div className="absolute inset-0 bg-[#FFC224] border-[4px] border-black rounded-3xl translate-x-2 sm:translate-x-4 translate-y-2 sm:translate-y-4" />
         <div className="absolute inset-0 bg-[#3C73ED] border-[4px] border-black rounded-3xl translate-x-2 translate-y-2" />
         
-        <div className="relative bg-white border-[4px] border-black rounded-3xl p-8 sm:p-12 min-h-[450px] flex flex-col items-center text-center">
+        <div className="relative bg-white border-[4px] border-black rounded-3xl p-6 sm:p-12 min-h-[450px] flex flex-col items-center text-center">
           
           <div className="inline-block px-4 py-2 bg-[#EA4335] text-white border-[3px] border-black rounded-lg font-black text-sm uppercase tracking-wider mb-8 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             {questionData.topic_tag}
           </div>
           
-          <h2 className="text-3xl sm:text-4xl font-black mb-12 leading-tight">
+          <h2 className="text-2xl sm:text-4xl font-black mb-12 leading-tight">
             {questionData.question_text}
           </h2>
 

@@ -25,7 +25,7 @@ export function LogoMarquee() {
 
   return (
     <div className="w-full">
-      <div className="relative overflow-hidden bg-[#EDEDED] border-y-[4px] border-black py-16 -rotate-[5deg] mt-32 mb-16 w-[150vw] -ml-[25vw]">
+      <div className="relative overflow-hidden bg-[#EDEDED] border-y-[4px] border-black py-10 md:py-16 -rotate-[5deg] mt-16 md:mt-32 mb-16 w-[150vw] -ml-[25vw]">
         <div className="flex items-center gap-16 animate-marquee whitespace-nowrap">
           {[...items, ...items, ...items, ...items].map((item, index) => (
             <img key={index} src={item.logo || "/placeholder.svg"} alt={item.alt} className="h-12 w-auto" />

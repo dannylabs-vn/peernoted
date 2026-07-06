@@ -137,7 +137,7 @@ export default function TutorPage() {
           <Stethoscope className="w-8 h-8 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black leading-tight">Vá Lỗi — Gia Sư AI 🩹</h1>
+          <h1 className="text-2xl sm:text-4xl font-black leading-tight">Vá Lỗi — Gia Sư AI 🩹</h1>
           <p className="text-gray-500 font-bold mt-1">
             Phân tích điểm yếu từ lịch sử làm quiz và lập lộ trình học cá nhân hóa
           </p>

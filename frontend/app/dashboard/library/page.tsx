@@ -180,9 +180,9 @@ function LibraryContent() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-120px)]">
+    <div className="flex flex-col md:flex-row gap-6 h-auto md:h-[calc(100vh-120px)]">
       {/* Left Column: Folders */}
-      <div className="w-full md:w-72 bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex-shrink-0">
+      <div className="w-full md:w-72 max-w-full max-h-[45vh] md:max-h-none bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex-shrink-0">
         <div className="p-4 border-b-[3px] border-black bg-[#FFC224] flex justify-between items-center">
           <h2 className="font-black text-lg">Thư mục của bạn</h2>
           {selectedFolderIds.size > 0 && (

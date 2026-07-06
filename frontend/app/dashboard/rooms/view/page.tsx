@@ -19,7 +19,8 @@ function RoomViewInner() {
   const [channels, setChannels] = useState<any[]>([])
   const [members, setMembers] = useState<any[]>([])
   const [activeChannel, setActiveChannel] = useState<any>(null)
-  
+  const [mobileTab, setMobileTab] = useState<'channels' | 'chat' | 'members'>('chat')
+
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [settingsForm, setSettingsForm] = useState({ name: '', description: '', topic: '', is_public: true })
   
@@ -322,10 +323,44 @@ function RoomViewInner() {
 
   return (
     <>
-      <div className="h-[calc(100vh-120px)] max-h-[900px] flex gap-6 pb-6">
-      
+      {/* Mobile Tab Switcher (only < lg) */}
+      <div className="lg:hidden flex gap-2 mb-3">
+        <button
+          onClick={() => setMobileTab('channels')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 border-[3px] border-black rounded-2xl font-black text-sm transition-all ${
+            mobileTab === 'channels'
+              ? 'bg-[#3C73ED] text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+              : 'bg-white text-black hover:bg-gray-50'
+          }`}
+        >
+          <Hash className="w-4 h-4" /> Kênh
+        </button>
+        <button
+          onClick={() => setMobileTab('chat')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 border-[3px] border-black rounded-2xl font-black text-sm transition-all ${
+            mobileTab === 'chat'
+              ? 'bg-[#10B981] text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+              : 'bg-white text-black hover:bg-gray-50'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" /> Chat
+        </button>
+        <button
+          onClick={() => setMobileTab('members')}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 border-[3px] border-black rounded-2xl font-black text-sm transition-all ${
+            mobileTab === 'members'
+              ? 'bg-[#9B51E0] text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+              : 'bg-white text-black hover:bg-gray-50'
+          }`}
+        >
+          <Users className="w-4 h-4" /> Phòng đấu & Thành viên
+        </button>
+      </div>
+
+      <div className="h-[calc(100vh-140px)] lg:h-[calc(100vh-120px)] max-h-[900px] flex gap-0 lg:gap-6 pb-6">
+
       {/* Left Sidebar: Channels */}
-      <div className="w-64 bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex-shrink-0">
+      <div className={`${mobileTab === 'channels' ? 'flex' : 'hidden'} lg:flex w-full lg:w-64 bg-white border-[3px] border-black rounded-2xl flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden lg:flex-shrink-0`}>
         <div className="p-4 border-b-[3px] border-black bg-[#FFC224]">
           <h2 className="font-black text-xl truncate">{room.name}</h2>
           <div className="text-xs font-bold mt-1 bg-white px-2 py-1 rounded border-[2px] border-black w-fit">
@@ -348,7 +383,7 @@ function RoomViewInner() {
             return (
               <div 
                 key={id}
-                onClick={() => { setActiveChannel(ch); setMessages([]); }}
+                onClick={() => { setActiveChannel(ch); setMessages([]); setMobileTab('chat'); }}
                 className={`flex justify-between items-center px-3 py-2 border-[2px] border-black rounded-xl font-bold cursor-pointer transition-all ${
                   isActive ? 'bg-[#3C73ED] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] translate-x-1' : 'bg-white hover:bg-gray-50'
                 }`}
@@ -396,7 +431,7 @@ function RoomViewInner() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+      <div className={`${mobileTab === 'chat' ? 'flex' : 'hidden'} lg:flex w-full lg:w-auto flex-1 bg-white border-[3px] border-black rounded-2xl flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden`}>
         {/* Chat Header */}
         <div className="p-4 border-b-[3px] border-black flex items-center gap-3">
           <Hash className="w-6 h-6 text-[#3C73ED]" />
@@ -465,7 +500,7 @@ function RoomViewInner() {
       </div>
 
       {/* Right Sidebar: PvP Battle + Members */}
-      <div className="w-64 flex flex-col gap-4 flex-shrink-0 overflow-y-auto">
+      <div className={`${mobileTab === 'members' ? 'flex' : 'hidden'} lg:flex w-full lg:w-64 flex-col gap-4 lg:flex-shrink-0 overflow-y-auto`}>
         {/* PvP Quiz Battle */}
         {roomId && myUserId && <BattlePanel roomId={roomId} myUserId={myUserId} />}
 
@@ -530,7 +565,7 @@ function RoomViewInner() {
       {/* Docs Modal */}
       {showDocsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl max-h-[80vh] rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95">
+          <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95">
             <div className="p-6 border-b-[4px] border-black flex justify-between items-center bg-[#FFC224]">
               <h2 className="text-2xl font-black flex items-center gap-2">
                  <FileText className="w-6 h-6" /> Quản lý tài liệu phòng
@@ -596,7 +631,7 @@ function RoomViewInner() {
       {/* Nickname Modal */}
       {showNicknameModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95">
+          <div className="bg-white w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95">
             <div className="p-6 border-b-[4px] border-black flex justify-between items-center bg-gray-50">
               <h2 className="text-xl font-black flex items-center gap-2">
                  Đổi biệt danh
@@ -644,7 +679,7 @@ function RoomViewInner() {
       {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95">
+          <div className="bg-white w-full max-w-md max-h-[90vh] rounded-3xl border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in zoom-in-95">
             <div className="p-6 border-b-[4px] border-black flex justify-between items-center bg-gray-50">
               <h2 className="text-2xl font-black flex items-center gap-2">
                 <Settings2 className="w-6 h-6" /> Cài đặt phòng
@@ -657,7 +692,7 @@ function RoomViewInner() {
               </button>
             </div>
             
-            <form onSubmit={handleUpdateRoom} className="p-6 space-y-4">
+            <form onSubmit={handleUpdateRoom} className="p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className="block text-sm font-black mb-2">Tên phòng</label>
                 <input 
