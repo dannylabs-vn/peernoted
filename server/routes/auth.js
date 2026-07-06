@@ -206,34 +206,22 @@ router.put('/me', protect, async (req, res) => {
 });
 
 const multer = require('multer');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const { uploadToStorage } = require('../services/storageService');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const fs = require('fs');
-    const uploadDir = path.join(__dirname, '..', '..', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `avatar_${req.user.id}_${Date.now()}${ext}`);
-  }
+// memoryStorage để có file.buffer → upload lên Supabase Storage (URL bền,
+// accessible từ mọi nơi). KHÔNG dùng diskStorage vì Render xóa file khi restart
+// và URL localhost:5000 hỏng trên production.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
 
 router.post('/me/avatar', protect, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Vui lòng chọn ảnh' });
 
-    // In a real app we'd determine the true backend origin. We'll use a relative /uploads/ path.
-    // The Next.js rewrite in dev will proxy this if configured, or the frontend must prepend NEXT_PUBLIC_API_URL.
-    // However, since it's just an avatar URL, we will prefix it with localhost:5000 if not defined.
-    const backendUrl = process.env.API_URL || 'http://localhost:5000';
-    const avatarUrl = `${backendUrl}/uploads/${req.file.filename}`;
+    // Upload lên Supabase Storage → public URL bền vững
+    const avatarUrl = await uploadToStorage(req.file);
 
     const { data: updated, error } = await supabase
       .from('users')
@@ -241,7 +229,7 @@ router.post('/me/avatar', protect, upload.single('file'), async (req, res) => {
       .eq('id', req.user.id)
       .select('*')
       .single();
-    
+
     if (error) throw error;
     res.json(publicUser(updated));
   } catch (error) {

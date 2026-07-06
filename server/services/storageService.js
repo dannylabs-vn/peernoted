@@ -44,7 +44,11 @@ async function uploadToLocal(file) {
 async function uploadToSupabase(file) {
   try {
     const { createClient } = require('@supabase/supabase-js');
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    // SUPABASE_URL trong .env có suffix /rest/v1/ → phải strip để Storage API
+    // build đúng endpoint (nếu không sẽ lỗi "Invalid path specified in request URL"
+    // → fallback local → URL localhost hỏng trên production).
+    const baseUrl = process.env.SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+    const supabase = createClient(baseUrl, process.env.SUPABASE_ANON_KEY);
 
     const ext = file.originalname.split('.').pop();
     const filename = `${uuidv4()}.${ext}`;

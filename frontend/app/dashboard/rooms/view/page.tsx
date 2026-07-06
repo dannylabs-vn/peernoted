@@ -52,8 +52,12 @@ function RoomViewInner() {
       setMembers(detail.members || [])
       setMyRole(detail.my_role || 'member')
       
-      const me = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json())
-      setMyUserId(me.user?.id || '')
+      // Dùng NEXT_PUBLIC_API_URL (static export không có rewrite /api → relative
+      // trả HTML của static site → JSON.parse lỗi "Unexpected token <").
+      // /me trả object user phẳng (không bọc .user).
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api'
+      const me = await fetch(`${apiBase}/auth/me`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json())
+      setMyUserId(me.id || me._id || me.user?.id || '')
       
       if (detail.channels && detail.channels.length > 0) {
         setActiveChannel(detail.channels[0])
@@ -610,7 +614,7 @@ function RoomViewInner() {
                         </div>
                       </div>
                       <div className="flex gap-2 shrink-0">
-                        <a href={`http://localhost:5000${file.storage_url}`} target="_blank" download className="p-2 bg-[#FFC224] border-[2px] border-black rounded-lg hover:-translate-y-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
+                        <a href={file.storage_url?.startsWith('http') ? file.storage_url : `${(process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/api\/?$/, '')}${file.storage_url}`} target="_blank" download className="p-2 bg-[#FFC224] border-[2px] border-black rounded-lg hover:-translate-y-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
                           <Download className="w-4 h-4" />
                         </a>
                         {(canManage || file.uploaded_by === myUserId) && (
