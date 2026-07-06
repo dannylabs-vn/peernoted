@@ -141,8 +141,16 @@ export default function QuizPage() {
     setSubmitting(true)
     try {
       await submitQuiz({
-        folder_id: selectedFolder._id || selectedFolder.id,
-        answers: responses
+        folderId: selectedFolder._id || selectedFolder.id,
+        answers: responses.map((r: any) => ({
+          question_text: r.question,
+          options: r.options,
+          correct_answer: r.answer,
+          user_answer: r.user_answer,
+          is_correct: r.is_correct,
+          topic_tag: r.topic_tag,
+          explanation: r.explanation
+        }))
       })
     } catch (err) {
       console.error('submitQuiz failed', err)

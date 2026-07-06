@@ -50,10 +50,15 @@ router.post('/generate/:folderId', protect, async (req, res) => {
 // ===========================================================================
 router.post('/submit', protect, async (req, res) => {
   try {
-    const { folderId, answers } = req.body;
-    // answers is an array of: { question_text, options, correct_answer, user_answer, is_correct, topic_tag, explanation }
+    // Chấp nhận cả folderId lẫn folder_id, và cả field name kiểu quiz page cũ
+    // (question/answer) lẫn kiểu route (question_text/correct_answer).
+    const folderId = req.body.folderId || req.body.folder_id;
+    const answers = req.body.answers;
     const userId = req.user.id;
 
+    if (!folderId) {
+      return res.status(400).json({ error: 'Thiếu folderId' });
+    }
     if (!answers || !Array.isArray(answers) || answers.length === 0) {
       return res.status(400).json({ error: 'Không có dữ liệu trả lời' });
     }
@@ -61,17 +66,16 @@ router.post('/submit', protect, async (req, res) => {
     let correctCount = 0;
     const attemptsToInsert = [];
 
-    // Calculate score and build attempts data
     for (const ans of answers) {
       if (ans.is_correct) correctCount++;
       attemptsToInsert.push({
         user_id: userId,
         folder_id: folderId,
-        question_text: ans.question_text,
-        options: ans.options,
-        correct_answer: ans.correct_answer,
-        user_answer: ans.user_answer,
-        is_correct: ans.is_correct,
+        question_text: ans.question_text || ans.question || '',
+        options: ans.options || [],
+        correct_answer: ans.correct_answer || ans.answer || '',
+        user_answer: ans.user_answer || '',
+        is_correct: !!ans.is_correct,
         topic_tag: ans.topic_tag || 'Khác',
         explanation: ans.explanation || ''
       });
