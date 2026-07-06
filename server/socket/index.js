@@ -95,6 +95,22 @@ function setupSocket(io) {
       const onlineUsers = Array.from(roomsPresence.get(roomId).values()).map(p => p.user);
       socket.emit('room-online-users', { users: onlineUsers });
 
+      // Nếu phòng đang có trận PvP ở lobby → báo cho người vừa vào để họ JOIN
+      // (không phải tự tạo trận mới). Fix "mỗi người chơi lẻ".
+      const activeBattle = [...battles.values()].find(
+        b => b.roomId === roomId && b.status === 'lobby'
+      );
+      if (activeBattle) {
+        socket.emit('battle-created', {
+          battleId: activeBattle.id,
+          host: activeBattle.players.get(activeBattle.hostId)?.user || null,
+          folderName: activeBattle.folderName,
+          questionCount: activeBattle.questions.length,
+          timePerQ: activeBattle.timePerQ,
+          players: [...activeBattle.players.values()].map(p => ({ user: p.user, score: p.score }))
+        });
+      }
+
       console.log(`  👤 ${socket.user.name} joined room ${roomId}`);
     });
 

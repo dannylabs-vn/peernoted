@@ -191,7 +191,8 @@ export default function BattlePanel({ roomId, myUserId }: { roomId: string; myUs
         setPhase('lobby');
       } else {
         setIsHost(false);
-        setIncoming(true); // show "Có trận đấu! Tham gia" prompt
+        setIncoming(true);   // hiện prompt "Có trận đấu! Tham gia"
+        setShowPicker(false); // đóng picker nếu member đang tự mở → thấy prompt join
       }
     };
 
@@ -313,10 +314,18 @@ export default function BattlePanel({ roomId, myUserId }: { roomId: string; myUs
       await battleCreate(roomId, selectedFolderId, selectedTime);
       // backend emits battle-generating / battle-created async
     } catch (e: any) {
-      showToast(e?.message || 'Không tạo được trận đấu', 'bad');
+      const msg = e?.message || 'Không tạo được trận đấu';
       setPhase('idle');
       setIsHost(false);
-      setShowPicker(true);
+      // Nếu phòng đã có trận khác → không tạo mới, mời họ JOIN thay vì báo lỗi
+      if (/đang có trận|trận đấu khác/i.test(msg)) {
+        setShowPicker(false);
+        setIncoming(true);
+        showToast('Phòng đã có trận đấu — bấm "Tham gia" nhé!', 'good');
+      } else {
+        showToast(msg, 'bad');
+        setShowPicker(true);
+      }
     } finally {
       setCreating(false);
     }
@@ -411,12 +420,14 @@ export default function BattlePanel({ roomId, myUserId }: { roomId: string; myUs
               </div>
             )}
 
-            <button
-              onClick={openPicker}
-              className="mt-2 px-6 py-3 rounded-2xl border-[3px] border-black bg-[#4285F4] text-white font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2"
-            >
-              <Swords className="w-5 h-5" /> Tạo phòng đấu
-            </button>
+            {!incoming && (
+              <button
+                onClick={openPicker}
+                className="mt-2 px-6 py-3 rounded-2xl border-[3px] border-black bg-[#4285F4] text-white font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2"
+              >
+                <Swords className="w-5 h-5" /> Tạo phòng đấu
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
