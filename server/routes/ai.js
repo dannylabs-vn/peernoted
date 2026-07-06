@@ -335,15 +335,24 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
         });
       }
       
-      // Temporary mock fallback if no legacy markdown
+      // Temporary mock fallback if no legacy markdown. Hiện LỖI THẬT để debug
+      // (thường do API key sai/hết quota, không phải "quá tải").
+      const rawMsg = (e && e.message) ? e.message : String(e);
+      const status = e?.status || e?.response?.status;
+      let hint = 'Bấm "Tạo lại phao" để thử lại sau 1-2 phút.';
+      if (status === 401 || /api key|invalid|unauthorized|permission/i.test(rawMsg)) {
+        hint = 'API key AI sai hoặc hết hạn. Kiểm tra OPENAI_API_KEY / GEMINI_API_KEY + AI_PROVIDER trên server.';
+      } else if (status === 429 || /quota|rate limit|exceeded/i.test(rawMsg)) {
+        hint = 'Đã hết quota/credit hoặc bị giới hạn tần suất. Kiểm tra billing của OpenAI/Gemini.';
+      }
       json = {
         title: 'Phao cứu cấp (Tạm thời)',
         sections: [
           {
-            heading: 'Hệ thống AI đang bận',
+            heading: 'Không tạo được phao — AI lỗi',
             blocks: [
-              { type: 'note', content: 'Hiện tại máy chủ AI đang nhận quá nhiều yêu cầu (có thể đã chạm ngưỡng giới hạn).', term: null, items: null, caption: null },
-              { type: 'list', content: 'Hướng giải quyết:', term: null, items: ['Vui lòng đợi khoảng 1-2 phút để hệ thống xả tải.', 'Bấm nút "Tạo lại phao" để thử lại.'], caption: null }
+              { type: 'note', content: `Lỗi: ${rawMsg}${status ? ` (HTTP ${status})` : ''}`, term: null, items: null, caption: null },
+              { type: 'note', content: hint, term: null, items: null, caption: null }
             ]
           }
         ]
