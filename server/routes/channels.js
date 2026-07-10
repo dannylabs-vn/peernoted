@@ -127,9 +127,11 @@ router.delete('/rooms/:roomId/channels/:channelId', protect, async (req, res) =>
 // ===========================================================================
 router.get('/rooms/:roomId/channels/:channelId/messages', protect, async (req, res) => {
   try {
+    // KHÔNG join room_members(nickname) vì cột nickname không tồn tại → query fail.
+    // Nickname lấy từ local dataStore (getNickname) bên dưới.
     const { data: messages, error } = await supabase
       .from('room_messages')
-      .select('*, users:user_id(id, name, email, avatar_url, room_members!inner(nickname))')
+      .select('*, users:user_id(id, name, email, avatar_url)')
       .eq('channel_id', req.params.channelId)
       .eq('room_id', req.params.roomId)
       .order('created_at', { ascending: true })

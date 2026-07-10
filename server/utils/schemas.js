@@ -208,6 +208,50 @@ const TUTOR_ROADMAP_SCHEMA = {
   }
 };
 
+const MINDMAP_SCHEMA = {
+  name: 'mindmap',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['title', 'root'],
+    properties: {
+      title: { type: 'string' },
+      root: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['label', 'children'],
+        properties: {
+          label: { type: 'string' },
+          children: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['label', 'children'],
+              properties: {
+                label: { type: 'string' },
+                children: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    additionalProperties: false,
+                    required: ['label'],
+                    properties: {
+                      label: { type: 'string' },
+                      children: { type: ['array', 'null'], items: { type: 'object', additionalProperties: false, required: ['label'], properties: { label: { type: 'string' } } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
 module.exports = {
   CHEAT_SHEET_SCHEMA,
   CLASSIFY_SCHEMA,
@@ -215,5 +259,6 @@ module.exports = {
   HANDWRITING_SCHEMA,
   RECOMMENDATIONS_SCHEMA,
   QUIZ_SCHEMA,
-  TUTOR_ROADMAP_SCHEMA
+  TUTOR_ROADMAP_SCHEMA,
+  MINDMAP_SCHEMA
 };

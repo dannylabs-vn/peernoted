@@ -10,7 +10,8 @@ const {
   migrateMarkdownToJson,
   generatePodcastScript,
   analyzeHandwriting,
-  generateResourceRecommendations
+  generateResourceRecommendations,
+  generateMindmap
 } = require('../services/aiService');
 const { extractText, isImageType, getImageMimeType } = require('../services/extractorService');
 const { uploadToStorage } = require('../services/storageService');
@@ -506,6 +507,27 @@ router.delete('/cheatsheet/:folderId', async (req, res) => {
     if (error) throw error;
     res.json({ message: 'Cheat sheet cache cleared' });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===========================================================================
+// POST /api/ai/mindmap/:folderId — sinh sơ đồ tư duy từ tài liệu folder
+// ===========================================================================
+router.post('/mindmap/:folderId', async (req, res) => {
+  try {
+    const folder = await getFolderOr404(req.params.folderId, res);
+    if (!folder) return;
+
+    const allTexts = await getAllTextsForFolder(req, folder.id);
+    if (!allTexts || allTexts.trim().length < 20) {
+      return res.status(400).json({ error: 'Không đủ nội dung văn bản để tạo mindmap' });
+    }
+
+    const mindmap = await generateMindmap(allTexts, folder.name);
+    res.json({ mindmap });
+  } catch (error) {
+    console.error('Mindmap error:', error);
     res.status(500).json({ error: error.message });
   }
 });

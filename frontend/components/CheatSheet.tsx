@@ -8,12 +8,14 @@ import {
   getCheatSheet,
   clearCheatSheet,
   setCheatSheetTemplate,
-  migrateCheatSheet
+  migrateCheatSheet,
+  generateMindmap
 } from '@/lib/api'
 import CheatSheetRenderer from './cheatsheet/CheatSheetRenderer'
 import TemplatePicker from './cheatsheet/TemplatePicker'
 import HandwritingUploadModal from './cheatsheet/HandwritingUploadModal'
 import ExportButtons from './cheatsheet/ExportButtons'
+import MindmapView from './MindmapView'
 import './CheatSheet.css'
 
 export default function CheatSheet({ folderId, folderName }) {
@@ -26,6 +28,12 @@ export default function CheatSheet({ folderId, folderName }) {
   const [cached, setCached] = useState(false)
   const [showHwModal, setShowHwModal] = useState(false)
   const [migrating, setMigrating] = useState(false)
+
+  // Mindmap (sơ đồ tư duy)
+  const [showMindmap, setShowMindmap] = useState(false)
+  const [mindmap, setMindmap] = useState<any>(null)
+  const [mindmapLoading, setMindmapLoading] = useState(false)
+  const [mindmapError, setMindmapError] = useState<any>(null)
 
   const renderRef = useRef(null)
 
@@ -100,6 +108,35 @@ export default function CheatSheet({ folderId, folderName }) {
     setTemplate('sketch-notebook')
   }
 
+  const fetchMindmap = async () => {
+    setMindmapLoading(true)
+    setMindmapError(null)
+    try {
+      const res = await generateMindmap(folderId)
+      // generateMindmap trả thẳng body { mindmap: {...} }
+      setMindmap(res?.mindmap || res)
+    } catch (err) {
+      setMindmapError(
+        err.response?.data?.error ||
+        err.message ||
+        'AI đang quá tải hoặc đã hết lượt. Vui lòng thử lại sau.'
+      )
+    } finally {
+      setMindmapLoading(false)
+    }
+  }
+
+  const openMindmap = () => {
+    setShowMindmap(true)
+    // Chỉ gọi AI lần đầu, các lần mở sau dùng lại kết quả đã cache
+    if (!mindmap && !mindmapLoading) fetchMindmap()
+  }
+
+  const regenerateMindmap = () => {
+    setMindmap(null)
+    fetchMindmap()
+  }
+
   if (loading) {
     return (
       <div className="cheatsheet-loading fade-in">
@@ -146,6 +183,13 @@ export default function CheatSheet({ folderId, folderName }) {
         </div>
         <div className="cheatsheet-actions">
           {cached && <span className="badge badge-accent">⚡ Cached</span>}
+          <button
+            onClick={openMindmap}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border-[3px] border-black text-white font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            style={{ backgroundColor: '#6366F1' }}
+          >
+            🧠 Mindmap
+          </button>
           <button className="btn btn-secondary" onClick={() => setShowHwModal(true)}>
             ✍️ Viết tay
           </button>
@@ -194,6 +238,77 @@ export default function CheatSheet({ folderId, folderName }) {
           onClose={() => setShowHwModal(false)}
           onApplied={handleHandwritingApplied}
         />
+      )}
+
+      {showMindmap && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-2"
+          onClick={() => setShowMindmap(false)}
+        >
+          <div
+            className="bg-white border-[3px] border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-4xl w-full mx-4 max-h-[85vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b-[3px] border-black px-5 py-3 rounded-t-2xl"
+              style={{ backgroundColor: '#6366F1' }}
+            >
+              <h3 className="flex items-center gap-2 font-black text-white text-lg">
+                <span aria-hidden>🧠</span> Sơ đồ tư duy
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={regenerateMindmap}
+                  disabled={mindmapLoading}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-[2px] border-black bg-white text-black font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  🔄 Tạo lại
+                </button>
+                <button
+                  onClick={() => setShowMindmap(false)}
+                  aria-label="Đóng"
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-lg border-[2px] border-black bg-white text-black font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5 md:p-6">
+              {mindmapLoading ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+                  <div
+                    className="w-14 h-14 rounded-full border-[4px] border-black border-t-transparent animate-spin"
+                    style={{ borderRightColor: '#6366F1', borderBottomColor: '#6366F1' }}
+                  />
+                  <p className="font-black text-black text-lg">AI đang vẽ sơ đồ tư duy...</p>
+                  <p className="font-medium text-black/60 text-sm">
+                    Quá trình này có thể mất khoảng 10-20 giây.
+                  </p>
+                </div>
+              ) : mindmapError ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-14 text-center">
+                  <span className="text-4xl" aria-hidden>😵</span>
+                  <p className="font-black text-black text-lg">Không thể tạo sơ đồ tư duy</p>
+                  <p className="max-w-md font-medium text-black/70 text-sm">{String(mindmapError)}</p>
+                  <button
+                    onClick={regenerateMindmap}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border-[3px] border-black text-white font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                    style={{ backgroundColor: '#EA4335' }}
+                  >
+                    🔄 Thử lại
+                  </button>
+                </div>
+              ) : mindmap ? (
+                <MindmapView data={mindmap} />
+              ) : (
+                <div className="py-14 text-center font-bold text-black/60">
+                  Chưa có sơ đồ tư duy.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

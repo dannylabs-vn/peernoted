@@ -64,6 +64,7 @@ export const classifyFiles = (files: File[]) => {
 
 // Cheat sheet
 export const getCheatSheet = (folderId: string) => API.get(`/ai/cheatsheet/${folderId}`);
+export const generateMindmap = (folderId: string) => API.post(`/ai/mindmap/${folderId}`).then(r => r.data);
 export const clearCheatSheet = (folderId: string) => API.delete(`/ai/cheatsheet/${folderId}`);
 export const setCheatSheetTemplate = (folderId: string, template: any) =>
   API.post(`/ai/cheatsheet/${folderId}/template`, { template });

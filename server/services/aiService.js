@@ -354,6 +354,17 @@ async function generateTutorRoadmap(statsSummary, userNote = '') {
   });
 }
 
+async function generateMindmap(allTexts, folderName = '') {
+  return chatJSON({
+    model: TEXT_MODEL,
+    schema: SCHEMAS.MINDMAP_SCHEMA,
+    messages: [
+      { role: 'system', content: 'Bạn là chuyên gia tạo sơ đồ tư duy. Trả về theo schema JSON đã định nghĩa.' },
+      { role: 'user', content: PROMPTS.generateMindmap(allTexts, folderName) }
+    ]
+  });
+}
+
 module.exports = {
   classifyFromText,
   classifyFromImage,
@@ -364,5 +375,6 @@ module.exports = {
   generateResourceRecommendations,
   generateQuiz,
   answerRoomQuestion,
-  generateTutorRoadmap
+  generateTutorRoadmap,
+  generateMindmap
 };

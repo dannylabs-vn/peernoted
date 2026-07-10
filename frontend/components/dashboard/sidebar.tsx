@@ -16,8 +16,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/forum', label: '07 Diễn đàn chia sẻ', icon: MessageSquare },
   { href: '/dashboard/rooms', label: '08 Phòng Học', icon: Users },
   { href: '/dashboard/rewards', label: '09 Cửa hàng PeerPoint', icon: Gift },
-  { href: '/dashboard/spaced-repetition', label: '10 Ôn tập (Cứu trợ)', icon: Repeat },
-  { href: '/dashboard/settings', label: '11 Cài đặt', icon: Settings },
+  { href: '/dashboard/settings', label: '10 Cài đặt', icon: Settings },
 ];
 
 export function Sidebar() {

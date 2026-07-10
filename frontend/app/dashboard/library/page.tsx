@@ -1,16 +1,17 @@
 "use client"
 
-import { useEffect, useState, Suspense } from 'react';
-import { getFolders, getFiles } from '@/lib/api';
+import { useEffect, useState, useRef, Suspense } from 'react';
+import { getFolders, getFiles, uploadFiles, createFolder } from '@/lib/api';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Folder, FileText, ChevronRight, Download, Eye, Trash2, Clock, Hash, Tag, List, LayoutGrid, Image as ImageIcon } from 'lucide-react';
+import { Folder, FileText, ChevronRight, Download, Eye, Trash2, Clock, Hash, Tag, List, LayoutGrid, Image as ImageIcon, Upload, UploadCloud, FolderPlus, X, Loader2, CheckCircle2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const CheatSheet = dynamic(() => import('@/components/CheatSheet'), {
   ssr: false,
 });
 import AudioPlayer from '@/components/AudioPlayer';
+import { resolveFileUrl } from '@/lib/fileUrl';
 
 function LibraryContent() {
   const searchParams = useSearchParams();
@@ -24,6 +25,21 @@ function LibraryContent() {
   const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
   const [view, setView] = useState<'files'|'cheatsheet'|'podcast'>('files');
   const [layoutMode, setLayoutMode] = useState<'list'|'grid'>('list');
+
+  // Manual (Google-Drive-style) file management
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderSubject, setNewFolderSubject] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success'|'error'; message: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const showToast = (type: 'success'|'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   useEffect(() => {
     const v = searchParams.get('view');
@@ -143,6 +159,75 @@ function LibraryContent() {
     }
   };
 
+  // ===== MANUAL UPLOAD (Google-Drive-style) =====
+  const handleManualUpload = async (fileList: FileList | File[] | null) => {
+    if (!folderId) {
+      showToast('error', 'Vui lòng chọn một thư mục trước khi tải lên');
+      return;
+    }
+    const selected = fileList ? Array.from(fileList) : [];
+    if (selected.length === 0) return;
+    setUploading(true);
+    try {
+      await uploadFiles(folderId, selected);
+      await fetchFiles(folderId);
+      await fetchFolders();
+      showToast('success', `Đã tải lên ${selected.length} file thành công!`);
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Tải lên thất bại. Vui lòng thử lại.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleManualUpload(e.target.files);
+  };
+
+  // ===== CREATE FOLDER (empty, manual) =====
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newFolderName.trim();
+    if (!name) return;
+    setCreatingFolder(true);
+    try {
+      const res = await createFolder({ name, subject: newFolderSubject.trim() || undefined });
+      const created = res.data;
+      await fetchFolders();
+      setShowCreateFolder(false);
+      setNewFolderName('');
+      setNewFolderSubject('');
+      showToast('success', 'Đã tạo thư mục mới!');
+      const newId = created?._id || created?.id;
+      if (newId) router.push(`/dashboard/library?folder=${newId}`);
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Không thể tạo thư mục. Vui lòng thử lại.');
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  // ===== DRAG & DROP =====
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!folderId || uploading) return;
+    if (!dragOver) setDragOver(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (!folderId) return;
+    const dropped = e.dataTransfer?.files;
+    if (dropped && dropped.length > 0) handleManualUpload(dropped);
+  };
+
   const decodeFilename = (str: string) => {
     if (!str) return '';
     try { return decodeURIComponent(str); } catch(e) { return str; }
@@ -183,16 +268,25 @@ function LibraryContent() {
     <div className="flex flex-col md:flex-row gap-6 h-auto md:h-[calc(100vh-120px)]">
       {/* Left Column: Folders */}
       <div className="w-full md:w-72 max-w-full max-h-[45vh] md:max-h-none bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex-shrink-0">
-        <div className="p-4 border-b-[3px] border-black bg-[#FFC224] flex justify-between items-center">
+        <div className="p-4 border-b-[3px] border-black bg-[#FFC224] flex justify-between items-center gap-2">
           <h2 className="font-black text-lg">Thư mục của bạn</h2>
-          {selectedFolderIds.size > 0 && (
-            <button 
-              onClick={handleBatchDeleteFolders}
-              className="text-xs font-bold bg-[#EA4335] text-white px-2 py-1 rounded-md border-[2px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-red-600 transition-all hover:-translate-y-[1px]"
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {selectedFolderIds.size > 0 && (
+              <button
+                onClick={handleBatchDeleteFolders}
+                className="text-xs font-bold bg-[#EA4335] text-white px-2 py-1 rounded-md border-[2px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:bg-red-600 transition-all hover:-translate-y-[1px]"
+              >
+                Xóa ({selectedFolderIds.size})
+              </button>
+            )}
+            <button
+              onClick={() => setShowCreateFolder(true)}
+              className="text-xs font-black bg-[#0B0B0B] text-white px-2.5 py-1.5 rounded-md border-[2px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-[1px] transition-all flex items-center gap-1 whitespace-nowrap"
+              title="Tạo thư mục mới"
             >
-              Xóa ({selectedFolderIds.size})
+              <FolderPlus className="w-3.5 h-3.5" /> Tạo
             </button>
-          )}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {folders.length === 0 ? (
@@ -249,7 +343,26 @@ function LibraryContent() {
       </div>
 
       {/* Right Column: Files & Tags */}
-      <div className="flex-1 bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden min-h-[400px]">
+      <div
+        className="flex-1 bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden min-h-[400px] relative"
+        onDragOver={folderId ? handleDragOver : undefined}
+        onDragLeave={folderId ? handleDragLeave : undefined}
+        onDrop={folderId ? handleDrop : undefined}
+      >
+        {/* Drag & drop overlay */}
+        {dragOver && folderId && (
+          <div className="absolute inset-0 z-30 bg-[#3C73ED]/90 border-[4px] border-dashed border-white rounded-2xl flex flex-col items-center justify-center pointer-events-none">
+            <UploadCloud className="w-16 h-16 text-white mb-3 animate-bounce" />
+            <p className="text-white font-black text-xl">Thả file để tải lên</p>
+          </div>
+        )}
+        {/* Uploading overlay */}
+        {uploading && (
+          <div className="absolute inset-0 z-30 bg-white/85 flex flex-col items-center justify-center pointer-events-none">
+            <Loader2 className="w-12 h-12 text-[#3C73ED] animate-spin mb-3" />
+            <p className="font-black text-lg">Đang tải lên...</p>
+          </div>
+        )}
         {!folderId ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
             <Folder className="w-20 h-20 mb-4 opacity-20" />
@@ -305,8 +418,28 @@ function LibraryContent() {
                     </button>
                   </>
                 )}
-                <Link href="/dashboard" className="hidden sm:block px-4 py-2 bg-[#3C73ED] text-white font-bold rounded-xl text-sm border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
-                  + Thêm File
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt,image/*"
+                  className="hidden"
+                  onChange={handleFileInputChange}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  title="Tải file trực tiếp vào thư mục này"
+                  className="px-3 sm:px-4 py-2 bg-[#3C73ED] text-white font-black rounded-xl text-sm border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {uploading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Đang tải lên...</>
+                  ) : (
+                    <><Upload className="w-4 h-4" /> Tải lên</>
+                  )}
+                </button>
+                <Link href="/dashboard" title="Dùng AI tự động phân loại file" className="hidden md:flex px-3 py-2 bg-white text-black font-bold rounded-xl text-sm border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all items-center gap-1">
+                  ✨ AI phân loại
                 </Link>
               </div>
             </div>
@@ -333,7 +466,7 @@ function LibraryContent() {
                             <FileText className="w-4 h-4 text-[#FFC224]" />
                           </div>
                           <div className="overflow-hidden">
-                            <a href={file.storage_url} target="_blank" rel="noreferrer" className="font-bold text-sm truncate mb-0.5 hover:text-[#3C73ED] hover:underline block" title={decodeFilename(file.original_name)}>
+                            <a href={resolveFileUrl(file.storage_url)} target="_blank" rel="noreferrer" className="font-bold text-sm truncate mb-0.5 hover:text-[#3C73ED] hover:underline block" title={decodeFilename(file.original_name)}>
                               {decodeFilename(file.original_name) || 'Tài liệu không tên'}
                             </a>
                             <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-500">
@@ -362,10 +495,10 @@ function LibraryContent() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <a href={file.storage_url} target="_blank" rel="noreferrer" className="p-2 border-[2px] border-black rounded-lg bg-white hover:bg-gray-100 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none" title="Xem">
+                          <a href={resolveFileUrl(file.storage_url)} target="_blank" rel="noreferrer" className="p-2 border-[2px] border-black rounded-lg bg-white hover:bg-gray-100 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none" title="Xem">
                             <Eye className="w-4 h-4" />
                           </a>
-                          <a href={file.storage_url} target="_blank" rel="noreferrer" download className="p-2 border-[2px] border-black rounded-lg bg-[#0B0B0B] text-white hover:bg-[#1a1a1a] shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none" title="Tải xuống">
+                          <a href={resolveFileUrl(file.storage_url)} target="_blank" rel="noreferrer" download className="p-2 border-[2px] border-black rounded-lg bg-[#0B0B0B] text-white hover:bg-[#1a1a1a] shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none" title="Tải xuống">
                             <Download className="w-4 h-4" />
                           </a>
                           <button onClick={(e) => handleDeleteFile(e, file._id)} className="p-2 border-[2px] border-black rounded-lg bg-[#EA4335] text-white hover:bg-red-600 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none" title="Xóa">
@@ -380,14 +513,14 @@ function LibraryContent() {
                            <button onClick={(e) => handleDeleteFile(e, file._id)} className="p-1 hover:bg-red-100 text-red-500 rounded" title="Xóa">
                              <Trash2 className="w-4 h-4" />
                            </button>
-                           <a href={file.storage_url} target="_blank" rel="noreferrer" download className="p-1 hover:bg-gray-200 rounded text-black" title="Tải xuống">
+                           <a href={resolveFileUrl(file.storage_url)} target="_blank" rel="noreferrer" download className="p-1 hover:bg-gray-200 rounded text-black" title="Tải xuống">
                              <Download className="w-4 h-4" />
                            </a>
                         </div>
                         <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 border-[2px] border-gray-200 rounded-lg mb-3 relative overflow-hidden group-hover:border-black transition-colors w-full">
                           {['png', 'jpg', 'jpeg', 'webp', 'gif'].includes((file.file_type || '').toLowerCase()) ? (
                             <img 
-                              src={file.storage_url} 
+                              src={resolveFileUrl(file.storage_url)} 
                               alt={decodeFilename(file.original_name)}
                               className="w-full h-full object-cover"
                               loading="lazy"
@@ -400,7 +533,7 @@ function LibraryContent() {
                             </>
                           )}
                         </div>
-                        <a href={file.storage_url} target="_blank" rel="noreferrer" className="font-bold text-sm truncate w-full hover:text-[#3C73ED] hover:underline flex items-center gap-2" title={decodeFilename(file.original_name)}>
+                        <a href={resolveFileUrl(file.storage_url)} target="_blank" rel="noreferrer" className="font-bold text-sm truncate w-full hover:text-[#3C73ED] hover:underline flex items-center gap-2" title={decodeFilename(file.original_name)}>
                           {['png', 'jpg', 'jpeg', 'webp', 'gif'].includes((file.file_type || '').toLowerCase()) ? (
                             <ImageIcon className="w-4 h-4 text-[#EA4335] flex-shrink-0" />
                           ) : (
@@ -421,6 +554,87 @@ function LibraryContent() {
           </>
         )}
       </div>
+
+      {/* Create Folder Modal */}
+      {showCreateFolder && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => !creatingFolder && setShowCreateFolder(false)}
+        >
+          <div
+            className="bg-white border-[3px] border-black rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b-[3px] border-black bg-[#FFC224] flex justify-between items-center">
+              <h3 className="font-black text-lg flex items-center gap-2">
+                <FolderPlus className="w-5 h-5" /> Tạo thư mục mới
+              </h3>
+              <button
+                onClick={() => setShowCreateFolder(false)}
+                disabled={creatingFolder}
+                className="p-1 hover:bg-black/10 rounded-lg transition-colors disabled:opacity-50"
+                title="Đóng"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateFolder} className="p-5 space-y-4">
+              <div>
+                <label className="block font-black text-sm mb-1.5">
+                  Tên thư mục <span className="text-[#EA4335]">*</span>
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="VD: Toán 12, Vật Lý..."
+                  className="w-full px-3 py-2.5 border-[2px] border-black rounded-xl font-semibold text-sm focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                />
+              </div>
+              <div>
+                <label className="block font-black text-sm mb-1.5">Môn học (tùy chọn)</label>
+                <input
+                  type="text"
+                  value={newFolderSubject}
+                  onChange={(e) => setNewFolderSubject(e.target.value)}
+                  placeholder="VD: Toán học"
+                  className="w-full px-3 py-2.5 border-[2px] border-black rounded-xl font-semibold text-sm focus:outline-none focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateFolder(false)}
+                  disabled={creatingFolder}
+                  className="flex-1 px-4 py-2.5 bg-white text-black font-black rounded-xl text-sm border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-60"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingFolder || !newFolderName.trim()}
+                  className="flex-1 px-4 py-2.5 bg-[#3C73ED] text-white font-black rounded-xl text-sm border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {creatingFolder ? (<><Loader2 className="w-4 h-4 animate-spin" /> Đang tạo...</>) : 'Tạo thư mục'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-[60] px-5 py-3 rounded-xl border-[3px] border-black font-black text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 max-w-[calc(100vw-3rem)] ${
+            toast.type === 'success' ? 'bg-[#34A853] text-white' : 'bg-[#EA4335] text-white'
+          }`}
+        >
+          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 flex-shrink-0" /> : <X className="w-5 h-5 flex-shrink-0" />}
+          <span>{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }
