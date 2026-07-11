@@ -512,6 +512,29 @@ router.delete('/cheatsheet/:folderId', async (req, res) => {
 });
 
 // ===========================================================================
+// POST /api/ai/cheatsheet/file/:fileId — phao cứu cấp cho MỘT file (không gộp folder)
+// ===========================================================================
+router.post('/cheatsheet/file/:fileId', async (req, res) => {
+  try {
+    const { data: file, error } = await (req.supabase || supabase)
+      .from('files').select('id, original_name, extracted_text, folder_id').eq('id', req.params.fileId).maybeSingle();
+    if (error) throw error;
+    if (!file) return res.status(404).json({ error: 'File không tồn tại' });
+
+    const text = file.extracted_text || '';
+    if (text.trim().length < 20) {
+      return res.status(400).json({ error: 'File này chưa có nội dung text (có thể là ảnh, hoặc tải lên trước bản cập nhật — hãy tải lại file PDF/Word/TXT).' });
+    }
+
+    const json = await generateCheatSheet(text, file.original_name);
+    res.json({ json, fileName: file.original_name });
+  } catch (error) {
+    console.error('Per-file cheat sheet error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===========================================================================
 // POST /api/ai/mindmap/:folderId — sinh sơ đồ tư duy từ tài liệu folder
 // ===========================================================================
 router.post('/mindmap/:folderId', async (req, res) => {

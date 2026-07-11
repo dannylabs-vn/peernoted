@@ -430,7 +430,7 @@ export default function BattlePanel({ roomId, myUserId }: { roomId: string; myUs
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-1">
+          <div className="flex flex-col gap-4">
             <div>
               <p className="font-black text-sm mb-2 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-[#FBBC05]" /> Chọn thư mục tài liệu

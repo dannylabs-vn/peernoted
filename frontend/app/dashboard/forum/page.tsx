@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Search, Upload, MessageSquare, Heart, Download, X, Star, FileText, XCircle } from 'lucide-react'
-import { getPeerPoints } from '@/lib/api'
+import { getPeerPoints, getForumPosts, createForumPost, downloadForumPost, likeForumPost } from '@/lib/api'
+import { resolveFileUrl } from '@/lib/fileUrl'
 
 const BASE_UNIVERSITIES = [
   // ĐHQG TP.HCM
@@ -105,8 +106,10 @@ const INITIAL_POSTS = [
 ]
 
 export default function ForumPage() {
-  const [posts, setPosts] = useState(INITIAL_POSTS)
-  
+  const [posts, setPosts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+
   // User profile & gamification states
   const [reputation, setReputation] = useState(120)
   const [contributions, setContributions] = useState(3)
@@ -147,41 +150,107 @@ export default function ForumPage() {
     } catch (e) {}
   }, [])
 
+  // Tải danh sách tài liệu thật từ backend khi mở trang
+  useEffect(() => {
+    let mounted = true
+    getForumPosts()
+      .then((data) => {
+        if (!mounted) return
+        setPosts(Array.isArray(data) ? data : [])
+      })
+      .catch((err) => {
+        console.error('Error fetching forum posts:', err)
+        // Chỉ dùng dữ liệu mẫu khi API lỗi để trang không bị trống/hỏng
+        if (mounted) setPosts(INITIAL_POSTS)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => { mounted = false }
+  }, [])
+
   const [uploadForm, setUploadForm] = useState({
     title: "", subject: "", school: "", category: "dethi", desc: "", file: null as File | null
   })
 
-
+  // ===== Bộ đọc dữ liệu (đọc field API thật, fallback field mẫu để không vỡ giao diện) =====
+  const pid = (p: any) => p?._id || p?.id
+  const getAuthorName = (p: any) => p.author || p.uploader?.name || 'Ẩn danh'
+  const getAuthorSchool = (p: any) => p.author_school || p.uploader?.school || (p.school ? String(p.school).split(' (')[0] : '')
+  const getInitials = (name: string) => (name || '').split(' ').filter(Boolean).map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'ND'
+  const getAvatarText = (p: any) => p.uploader?.avatar || getInitials(getAuthorName(p))
+  const getAuthorAvatar = (p: any) => p.author_avatar || ''
+  const getFileUrl = (p: any) => p.file_url || p.fileUrl || ''
+  const getFileType = (p: any) => String(p.file_type || p.fileType || 'FILE').toUpperCase()
+  const getFileSizeLabel = (p: any) => {
+    const b = p.file_size
+    if (typeof b === 'number' && b > 0) {
+      if (b >= 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`
+      if (b >= 1024) return `${Math.round(b / 1024)} KB`
+      return `${b} B`
+    }
+    return p.fileSize || '—'
+  }
+  const getPostDateRaw = (p: any) => p.created_at || p.createdAt || p.date || ''
+  const getPostDateLabel = (p: any) => {
+    const d = getPostDateRaw(p)
+    if (!d) return ''
+    try { return new Date(d).toLocaleDateString('vi-VN') } catch { return String(d) }
+  }
+  const getDesc = (p: any) => p.description || p.desc || 'Không có mô tả.'
+  const getSubject = (p: any) => p.subject || ''
 
   const showToast = (message: string, type: string = 'info') => {
     setNotification({ message, type })
     setTimeout(() => setNotification(null), 4000)
   }
 
-  const handleLikePost = (postId: number, e?: any) => {
+  const handleLikePost = async (post: any, e?: any) => {
     e && e.stopPropagation()
-    setPosts(prev => prev.map(post => {
-      if (post.id === postId) {
-        const updated = !post.hasLiked
-        const newPost = { ...post, hasLiked: updated, likes: updated ? post.likes + 1 : post.likes - 1 }
-        if (selectedPost?.id === postId) setSelectedPost(newPost)
-        return newPost
-      }
-      return post
-    }))
+    const id = pid(post)
+    if (!id || post.hasLiked) return
+    try {
+      const res = await likeForumPost(id)
+      const newLikes = res?.likes ?? (post.likes || 0) + 1
+      setPosts(prev => prev.map(p => pid(p) === id ? { ...p, likes: newLikes, hasLiked: true } : p))
+      setSelectedPost((sp: any) => (sp && pid(sp) === id) ? { ...sp, likes: newLikes, hasLiked: true } : sp)
+    } catch (err) {
+      console.error('Like forum post failed:', err)
+      showToast('Không thể thích tài liệu lúc này. Vui lòng đăng nhập và thử lại.', 'error')
+    }
   }
 
-  const handleDownload = (post: any, e?: any) => {
+  const handleDownload = async (post: any, e?: any) => {
     e && e.stopPropagation()
-    setPosts(prev => prev.map(p => {
-      if (p.id === post.id) {
-        const newP = { ...p, downloads: p.downloads + 1 }
-        if (selectedPost?.id === post.id) setSelectedPost(newP)
-        return newP
+    const id = pid(post)
+    if (!getFileUrl(post) || !id) {
+      showToast('Tài liệu này chưa có tệp để tải xuống.', 'error')
+      return
+    }
+    try {
+      const res = await downloadForumPost(id)
+      const url = resolveFileUrl(res?.file_url)
+      if (!url) {
+        showToast('Không tìm thấy tệp đính kèm.', 'error')
+        return
       }
-      return p
-    }))
-    showToast(`Đang tải xuống: ${post.title}`, 'success')
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res?.file_name || ''
+      a.target = '_blank'
+      a.rel = 'noopener'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+
+      const newDownloads = res?.downloads ?? (post.downloads || 0) + 1
+      setPosts(prev => prev.map(p => pid(p) === id ? { ...p, downloads: newDownloads } : p))
+      setSelectedPost((sp: any) => (sp && pid(sp) === id) ? { ...sp, downloads: newDownloads } : sp)
+      showToast(`Đang tải xuống: ${post.title}`, 'success')
+    } catch (err) {
+      console.error('Download forum post failed:', err)
+      showToast('Tải xuống thất bại. Vui lòng thử lại.', 'error')
+    }
   }
 
   const handleAddComment = (e: any) => {
@@ -190,8 +259,8 @@ export default function ForumPage() {
     const newComment = { id: Date.now(), author: currentUser.name, avatar: currentUser.avatar, text: newCommentText.trim(), time: "Vừa xong" }
     
     setPosts(prev => prev.map(post => {
-      if (post.id === selectedPost.id) {
-        const newPost = { ...post, comments: [...post.comments, newComment] }
+      if (pid(post) === pid(selectedPost)) {
+        const newPost = { ...post, comments: [...(post.comments || []), newComment] }
         setSelectedPost(newPost)
         return newPost
       }
@@ -201,49 +270,49 @@ export default function ForumPage() {
     showToast("Đã gửi bình luận thành công", "success")
   }
 
-  const handleUploadSubmit = (e: any) => {
+  const handleUploadSubmit = async (e: any) => {
     e.preventDefault()
-    if (!uploadForm.title || !uploadForm.subject || !uploadForm.school || !uploadForm.file) {
-      alert("Vui lòng điền các thông tin bắt buộc và chọn tệp.")
+    if (!uploadForm.title || !uploadForm.file) {
+      alert("Vui lòng nhập tiêu đề và chọn tệp tài liệu.")
       return
     }
+    if (uploading) return
 
-    let code = "TL"
-    const match = uploadForm.school.match(/\(([^)]+)\)/)
-    if (match) code = match[1]
-    else code = uploadForm.school.split(' ').map(w => w.charAt(0)).join('').toUpperCase().substring(0, 3)
+    try {
+      setUploading(true)
+      const fd = new FormData()
+      fd.append('title', uploadForm.title)
+      fd.append('description', uploadForm.desc || '')
+      fd.append('category', uploadForm.category)
+      fd.append('school', uploadForm.school || '')
+      // subject không được backend lưu nhưng gửi kèm cũng vô hại
+      if (uploadForm.subject) fd.append('subject', uploadForm.subject)
+      fd.append('file', uploadForm.file)
 
-    const newPost = {
-      id: Date.now(),
-      title: uploadForm.title,
-      subject: uploadForm.subject,
-      school: uploadForm.school,
-      schoolCode: code,
-      category: uploadForm.category,
-      desc: uploadForm.desc || "Không có mô tả.",
-      uploader: { name: currentUser.name, avatar: currentUser.avatar, school: uploadForm.school.split(' (')[0] },
-      fileSize: `${(uploadForm.file.size / (1024 * 1024)).toFixed(1)} MB`,
-      fileType: uploadForm.file.name.split('.').pop()?.toUpperCase() || 'FILE',
-      thumbnail: THUMBNAILS[Math.floor(Math.random() * THUMBNAILS.length)],
-      downloads: 0,
-      likes: 0,
-      hasLiked: false,
-      comments: [],
-      date: new Date().toISOString().split('T')[0]
+      const created = await createForumPost(fd)
+      // Giữ lại môn học vừa nhập cho phiên hiển thị hiện tại
+      const enriched = uploadForm.subject ? { ...created, subject: uploadForm.subject } : created
+      setPosts(prev => [enriched, ...prev])
+      setContributions(prev => prev + 1)
+      setReputation(prev => prev + 10)
+      setUploadForm({ title: "", subject: "", school: "", category: "dethi", desc: "", file: null })
+      setShowUploadModal(false)
+      showToast("Đóng góp thành công! Tài liệu đã được lưu.", "success")
+    } catch (err: any) {
+      console.error('Create forum post failed:', err)
+      showToast(err?.response?.data?.error || "Đăng tài liệu thất bại. Vui lòng đăng nhập và thử lại.", "error")
+    } finally {
+      setUploading(false)
     }
-
-    setPosts(prev => [newPost, ...prev])
-    setContributions(prev => prev + 1)
-    setReputation(prev => prev + 50) 
-    setUploadForm({ title: "", subject: "", school: "", category: "dethi", desc: "", file: null })
-    setShowUploadModal(false)
-    showToast("Đóng góp thành công! Nhận thêm 50 XP.", "success")
   }
 
   const filteredPosts = posts.filter(post => {
     const searchLow = searchTerm.toLowerCase()
-    const matchesSearch = post.title.toLowerCase().includes(searchLow) || post.subject.toLowerCase().includes(searchLow) || post.school.toLowerCase().includes(searchLow)
-    const matchesCategory = selectedCategory === "Tất cả" || 
+    const matchesSearch =
+      String(post.title || '').toLowerCase().includes(searchLow) ||
+      getSubject(post).toLowerCase().includes(searchLow) ||
+      String(post.school || '').toLowerCase().includes(searchLow)
+    const matchesCategory = selectedCategory === "Tất cả" ||
       (selectedCategory === "Đề thi" && post.category === "dethi") ||
       (selectedCategory === "Slide bài giảng" && post.category === "slide") ||
       (selectedCategory === "Tóm tắt môn" && post.category === "tomtat") ||
@@ -253,12 +322,12 @@ export default function ForumPage() {
   })
 
   const sortedPosts = [...filteredPosts].sort((a, b) => {
-    if (selectedSort === "popular") return b.downloads - a.downloads
-    return new Date(b.date).getTime() - new Date(a.date).getTime()
+    if (selectedSort === "popular") return (b.downloads || 0) - (a.downloads || 0)
+    return new Date(getPostDateRaw(b)).getTime() - new Date(getPostDateRaw(a)).getTime()
   })
 
   const categoriesList = ["Tất cả", "Đề thi", "Slide bài giảng", "Tóm tắt môn", "Bài tập mẫu", "Giáo trình", "Tham khảo", "Khác"]
-  const activeSchools = Array.from(new Set(posts.map(p => p.school)))
+  const activeSchools = Array.from(new Set(posts.map(p => p.school).filter(Boolean)))
 
   const getCategoryLabel = (cat: string) => {
     if (cat === 'dethi') return 'Đề thi'
@@ -412,7 +481,27 @@ export default function ForumPage() {
             </div>
           </div>
 
-          {sortedPosts.length === 0 ? (
+          {loading ? (
+            <div className="bg-white border-[3px] border-black rounded-2xl p-12 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="w-16 h-16 border-[4px] border-black border-t-[#9B51E0] rounded-full animate-spin mx-auto mb-6" />
+              <h3 className="text-2xl font-black mb-2">Đang tải tài liệu...</h3>
+              <p className="text-gray-500 font-bold">Vui lòng chờ trong giây lát.</p>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="bg-white border-[3px] border-black rounded-2xl p-12 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="w-20 h-20 bg-[#FFC224] border-[3px] border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <Upload className="w-8 h-8 text-black" />
+              </div>
+              <h3 className="text-2xl font-black mb-2">Chưa có tài liệu nào được chia sẻ</h3>
+              <p className="text-gray-500 font-bold mb-6">Hãy là người đầu tiên đóng góp!</p>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#10B981] text-white border-[3px] border-black rounded-xl font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none transition-all"
+              >
+                <Upload className="w-5 h-5" /> Đóng góp ngay
+              </button>
+            </div>
+          ) : sortedPosts.length === 0 ? (
             <div className="bg-white border-[3px] border-black rounded-2xl p-12 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <div className="w-20 h-20 bg-gray-100 border-[3px] border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                 <Search className="w-8 h-8 text-gray-400" />
@@ -422,9 +511,12 @@ export default function ForumPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              {sortedPosts.map(post => (
-                <div 
-                  key={post.id}
+              {sortedPosts.map(post => {
+                const ft = getFileType(post)
+                const avatarUrl = getAuthorAvatar(post)
+                return (
+                <div
+                  key={pid(post)}
                   onClick={() => setSelectedPost(post)}
                   className="group bg-white border-[3px] border-black rounded-2xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-2 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex flex-col h-full"
                 >
@@ -432,16 +524,16 @@ export default function ForumPage() {
                     <span className={`px-2 py-0.5 text-[10px] font-black uppercase border-[2px] border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${getCategoryColor(post.category)}`}>
                       {getCategoryLabel(post.category)}
                     </span>
-                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md border-[2px] border-black">{post.fileType} • {post.fileSize}</span>
+                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md border-[2px] border-black">{ft} • {getFileSizeLabel(post)}</span>
                   </div>
-                  
+
                   {/* Thumbnail Image */}
                   <div className="w-full h-28 mb-3 rounded-xl border-[2px] border-black overflow-hidden relative bg-white flex-shrink-0 group-hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] transition-shadow flex flex-col">
                     {/* Top decoration bar */}
-                    <div className={`h-2 w-full ${post.fileType === 'PDF' ? 'bg-[#EA4335]' : post.fileType === 'PPTX' ? 'bg-[#FFC224]' : 'bg-[#3C73ED]'}`} />
+                    <div className={`h-2 w-full ${ft === 'PDF' ? 'bg-[#EA4335]' : (ft === 'PPTX' || ft === 'PPT') ? 'bg-[#FFC224]' : 'bg-[#3C73ED]'}`} />
                     <div className="flex-1 flex flex-col items-center justify-center p-3 text-center bg-gray-50 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
-                      <div className={`text-[10px] px-2 py-0.5 rounded font-black border-[2px] border-black mb-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${post.fileType === 'PDF' ? 'bg-[#EA4335] text-white' : post.fileType === 'PPTX' ? 'bg-[#FFC224] text-black' : 'bg-white text-black'}`}>
-                        {post.fileType}
+                      <div className={`text-[10px] px-2 py-0.5 rounded font-black border-[2px] border-black mb-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${ft === 'PDF' ? 'bg-[#EA4335] text-white' : (ft === 'PPTX' || ft === 'PPT') ? 'bg-[#FFC224] text-black' : 'bg-white text-black'}`}>
+                        {ft}
                       </div>
                       <h4 className="font-black text-gray-800 text-xs line-clamp-2 leading-snug px-1">
                         {post.title}
@@ -451,29 +543,32 @@ export default function ForumPage() {
 
                   <h3 className="text-sm font-black mb-1 line-clamp-2 leading-snug group-hover:text-[#3C73ED] transition-colors">{post.title}</h3>
                   <p className="text-[10px] font-bold text-gray-400 mb-3 line-clamp-1">{post.school}</p>
-                  
+
                   <div className="mt-auto pt-3 border-t-[3px] border-black flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-[#FFC224] border-[2px] border-black rounded-full flex items-center justify-center font-black text-[10px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                        {post.uploader.avatar}
+                      <div className="w-6 h-6 bg-[#FFC224] border-[2px] border-black rounded-full flex items-center justify-center font-black text-[10px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+                        {avatarUrl ? (
+                          <img src={resolveFileUrl(avatarUrl)} alt="" className="w-full h-full object-cover" />
+                        ) : getAvatarText(post)}
                       </div>
                       <div className="text-[10px] font-bold truncate max-w-[80px]">
-                        {post.uploader.name}
+                        {getAuthorName(post)}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-[10px] font-black">
                       <div className="flex items-center gap-1 text-[#EA4335]">
                         <Heart className={`w-3 h-3 ${post.hasLiked ? 'fill-current' : ''}`} />
-                        {post.likes}
+                        {post.likes || 0}
                       </div>
                       <div className="flex items-center gap-1 text-[#3C73ED]">
                         <Download className="w-3 h-3" />
-                        {post.downloads}
+                        {post.downloads || 0}
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -492,8 +587,12 @@ export default function ForumPage() {
                 </span>
                 <h2 className="text-2xl font-black mb-2 leading-tight">{selectedPost.title}</h2>
                 <div className="flex flex-wrap gap-2 text-sm font-bold">
-                  <span className="bg-white px-3 py-1 rounded-md border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">{selectedPost.subject}</span>
-                  <span className="bg-white px-3 py-1 rounded-md border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">{selectedPost.school}</span>
+                  {getSubject(selectedPost) && (
+                    <span className="bg-white px-3 py-1 rounded-md border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">{getSubject(selectedPost)}</span>
+                  )}
+                  {selectedPost.school && (
+                    <span className="bg-white px-3 py-1 rounded-md border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">{selectedPost.school}</span>
+                  )}
                 </div>
               </div>
               <button 
@@ -506,28 +605,37 @@ export default function ForumPage() {
 
             {/* Body */}
             <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
-              <p className="text-lg font-semibold leading-relaxed mb-8">{selectedPost.desc}</p>
-              
+              <p className="text-lg font-semibold leading-relaxed mb-8">{getDesc(selectedPost)}</p>
+
               <div className="flex flex-col sm:flex-row items-center gap-4 bg-white border-[3px] border-black rounded-2xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-8">
                 <div className="w-16 h-16 bg-[#3C73ED] border-[3px] border-black rounded-xl flex items-center justify-center text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   <FileText className="w-8 h-8" />
                 </div>
                 <div className="flex-1 text-center sm:text-left">
-                  <div className="font-black text-xl mb-1">{selectedPost.fileType} Document</div>
-                  <div className="text-gray-500 font-bold">Kích thước: {selectedPost.fileSize} • Đăng ngày: {selectedPost.date}</div>
+                  <div className="font-black text-xl mb-1">{getFileType(selectedPost)} Document</div>
+                  <div className="text-gray-500 font-bold">Kích thước: {getFileSizeLabel(selectedPost)} • Đăng ngày: {getPostDateLabel(selectedPost)}</div>
                 </div>
-                <button 
-                  onClick={(e) => handleDownload(selectedPost, e)}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-[#10B981] text-white font-black border-[3px] border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none transition-all"
-                >
-                  <Download className="w-5 h-5" /> Tải Xuống
-                </button>
+                {getFileUrl(selectedPost) ? (
+                  <button
+                    onClick={(e) => handleDownload(selectedPost, e)}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-[#10B981] text-white font-black border-[3px] border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-none transition-all"
+                  >
+                    <Download className="w-5 h-5" /> Tải Xuống
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gray-300 text-gray-600 font-black border-[3px] border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] cursor-not-allowed opacity-70"
+                  >
+                    <XCircle className="w-5 h-5" /> Không có tệp
+                  </button>
+                )}
               </div>
 
               {/* Comments Section */}
               <div className="space-y-6">
                 <h3 className="text-xl font-black flex items-center gap-2">
-                  <MessageSquare className="w-6 h-6" /> Bình luận ({selectedPost.comments.length})
+                  <MessageSquare className="w-6 h-6" /> Bình luận ({(selectedPost.comments || []).length})
                 </h3>
                 
                 <form onSubmit={handleAddComment} className="flex gap-3">
@@ -549,7 +657,7 @@ export default function ForumPage() {
                 </form>
 
                 <div className="space-y-4">
-                  {selectedPost.comments.map((cmt: any) => (
+                  {(selectedPost.comments || []).map((cmt: any) => (
                     <div key={cmt.id} className="flex gap-4 p-4 bg-white border-[2px] border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                       <div className="w-10 h-10 bg-gray-200 border-[2px] border-black rounded-full flex items-center justify-center font-black flex-shrink-0">
                         {cmt.avatar}
@@ -571,22 +679,24 @@ export default function ForumPage() {
             {/* Footer */}
             <div className="p-4 border-t-[4px] border-black bg-white flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#FFC224] border-[2px] border-black rounded-full flex items-center justify-center font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  {selectedPost.uploader.avatar}
+                <div className="w-10 h-10 bg-[#FFC224] border-[2px] border-black rounded-full flex items-center justify-center font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+                  {getAuthorAvatar(selectedPost) ? (
+                    <img src={resolveFileUrl(getAuthorAvatar(selectedPost))} alt="" className="w-full h-full object-cover" />
+                  ) : getAvatarText(selectedPost)}
                 </div>
                 <div>
-                  <div className="text-sm font-black">{selectedPost.uploader.name}</div>
-                  <div className="text-xs font-bold text-gray-500">{selectedPost.uploader.school}</div>
+                  <div className="text-sm font-black">{getAuthorName(selectedPost)}</div>
+                  <div className="text-xs font-bold text-gray-500">{getAuthorSchool(selectedPost)}</div>
                 </div>
               </div>
-              <button 
-                onClick={(e) => handleLikePost(selectedPost.id, e)}
+              <button
+                onClick={(e) => handleLikePost(selectedPost, e)}
                 className={`flex items-center gap-2 px-4 py-2 border-[3px] border-black rounded-xl font-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
                   selectedPost.hasLiked ? 'bg-[#EA4335] text-white' : 'bg-white hover:bg-gray-50'
                 }`}
               >
                 <Heart className={`w-5 h-5 ${selectedPost.hasLiked ? 'fill-current' : ''}`} />
-                {selectedPost.likes}
+                {selectedPost.likes || 0}
               </button>
             </div>
           </div>
@@ -724,11 +834,12 @@ export default function ForumPage() {
                 >
                   Hủy
                 </button>
-                <button 
+                <button
                   type="submit"
-                  className="px-6 py-3 bg-[#10B981] text-white border-[3px] border-black rounded-xl font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)] transition-all"
+                  disabled={uploading}
+                  className="px-6 py-3 bg-[#10B981] text-white border-[3px] border-black rounded-xl font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 >
-                  Đăng tài liệu
+                  {uploading ? 'Đang đăng...' : 'Đăng tài liệu'}
                 </button>
               </div>
             </form>

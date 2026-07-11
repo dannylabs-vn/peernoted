@@ -505,10 +505,14 @@ function RoomViewInner() {
 
       {/* Right Sidebar: PvP Battle + Members */}
       <div className={`${mobileTab === 'members' ? 'flex' : 'hidden'} lg:flex w-full lg:w-64 flex-col gap-4 lg:flex-shrink-0 overflow-y-auto`}>
-        {/* PvP Quiz Battle */}
-        {roomId && myUserId && <BattlePanel roomId={roomId} myUserId={myUserId} />}
+        {/* PvP Quiz Battle — shrink-0 để không bị flexbox co lại (clip nút Bắt đầu) */}
+        {roomId && myUserId && (
+          <div className="shrink-0">
+            <BattlePanel roomId={roomId} myUserId={myUserId} />
+          </div>
+        )}
 
-      <div className="bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+      <div className="shrink-0 bg-white border-[3px] border-black rounded-2xl flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
         <div className="p-4 border-b-[3px] border-black flex items-center justify-between">
           <h3 className="font-black flex items-center gap-2"><Users className="w-5 h-5"/> Thành viên</h3>
           <span className="bg-[#9B51E0] text-white text-xs font-black px-2 py-1 rounded-md border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">

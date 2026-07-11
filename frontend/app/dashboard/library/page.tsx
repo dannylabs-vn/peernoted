@@ -1,13 +1,16 @@
 "use client"
 
 import { useEffect, useState, useRef, Suspense } from 'react';
-import { getFolders, getFiles, uploadFiles, createFolder } from '@/lib/api';
+import { getFolders, getFiles, uploadFiles, createFolder, generateFileCheatSheet } from '@/lib/api';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Folder, FileText, ChevronRight, Download, Eye, Trash2, Clock, Hash, Tag, List, LayoutGrid, Image as ImageIcon, Upload, UploadCloud, FolderPlus, X, Loader2, CheckCircle2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const CheatSheet = dynamic(() => import('@/components/CheatSheet'), {
+  ssr: false,
+});
+const CheatSheetRenderer: any = dynamic(() => import('@/components/cheatsheet/CheatSheetRenderer'), {
   ssr: false,
 });
 import AudioPlayer from '@/components/AudioPlayer';
@@ -35,6 +38,12 @@ function LibraryContent() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [toast, setToast] = useState<{ type: 'success'|'error'; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // ===== PER-FILE CHEAT SHEET (Phao cho từng file) =====
+  const [cheatFile, setCheatFile] = useState<{ id: string; name: string } | null>(null);
+  const [cheatLoading, setCheatLoading] = useState(false);
+  const [cheatError, setCheatError] = useState<string | null>(null);
+  const [cheatCache, setCheatCache] = useState<Record<string, any>>({});
 
   const showToast = (type: 'success'|'error', message: string) => {
     setToast({ type, message });
@@ -157,6 +166,39 @@ function LibraryContent() {
     } finally {
       setFilesLoading(false);
     }
+  };
+
+  // ===== PER-FILE CHEAT SHEET HANDLERS =====
+  const openFileCheatSheet = async (id: string, name: string, force = false) => {
+    setCheatFile({ id, name });
+    setCheatError(null);
+    // Dùng lại kết quả đã cache nếu có (trừ khi bấm "Tạo lại")
+    if (!force && cheatCache[id]) {
+      setCheatLoading(false);
+      return;
+    }
+    setCheatLoading(true);
+    try {
+      const res = await generateFileCheatSheet(id);
+      setCheatCache(prev => ({ ...prev, [id]: res.json }));
+    } catch (err: any) {
+      setCheatError(
+        err?.response?.data?.error || err?.message || null
+      );
+    } finally {
+      setCheatLoading(false);
+    }
+  };
+
+  const regenerateFileCheatSheet = () => {
+    if (!cheatFile) return;
+    const { id, name } = cheatFile;
+    setCheatCache(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    openFileCheatSheet(id, name, true);
   };
 
   // ===== MANUAL UPLOAD (Google-Drive-style) =====
@@ -495,6 +537,13 @@ function LibraryContent() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFileCheatSheet(file._id, decodeFilename(file.original_name) || 'Tài liệu'); }}
+                            className="px-2.5 py-2 border-[2px] border-black rounded-lg bg-[#FBBC05] text-black font-black text-xs hover:bg-[#f5b400] shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none flex items-center gap-1 whitespace-nowrap"
+                            title="Tạo phao (cheat sheet) cho file này"
+                          >
+                            📝 <span className="hidden sm:inline">Phao</span>
+                          </button>
                           <a href={resolveFileUrl(file.storage_url)} target="_blank" rel="noreferrer" className="p-2 border-[2px] border-black rounded-lg bg-white hover:bg-gray-100 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none" title="Xem">
                             <Eye className="w-4 h-4" />
                           </a>
@@ -510,6 +559,9 @@ function LibraryContent() {
                       // GRID VIEW
                       <div key={file._id} className="group bg-white border-[2px] border-black rounded-xl p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all flex flex-col h-[260px] relative">
                         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/90 backdrop-blur-sm p-1 rounded-lg border-[2px] border-black">
+                           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFileCheatSheet(file._id, decodeFilename(file.original_name) || 'Tài liệu'); }} className="p-1 bg-[#FBBC05] hover:bg-[#f5b400] text-black rounded border-[2px] border-black" title="Tạo phao (cheat sheet) cho file này">
+                             📝
+                           </button>
                            <button onClick={(e) => handleDeleteFile(e, file._id)} className="p-1 hover:bg-red-100 text-red-500 rounded" title="Xóa">
                              <Trash2 className="w-4 h-4" />
                            </button>
@@ -545,6 +597,13 @@ function LibraryContent() {
                            <span>{formatDate(file.createdAt)}</span>
                            <span>{formatSize(file.file_size)}</span>
                         </div>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFileCheatSheet(file._id, decodeFilename(file.original_name) || 'Tài liệu'); }}
+                          className="mt-2 w-full px-2 py-1.5 bg-[#FBBC05] text-black font-black text-xs rounded-lg border-[2px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-none transition-all flex items-center justify-center gap-1"
+                          title="Tạo phao (cheat sheet) cho file này"
+                        >
+                          📝 Tạo phao
+                        </button>
                       </div>
                     )
                   ))}
@@ -620,6 +679,85 @@ function LibraryContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Per-file Cheat Sheet Modal (Phao cho từng file) */}
+      {cheatFile && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-2"
+          onClick={() => setCheatFile(null)}
+        >
+          <div
+            className="bg-white border-[3px] border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-4xl w-full mx-4 max-h-[85vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b-[3px] border-black px-5 py-3 rounded-t-2xl bg-[#FBBC05]">
+              <h3 className="flex items-center gap-2 font-black text-black text-lg min-w-0">
+                <span aria-hidden>📝</span>
+                <span className="truncate">Phao: {cheatFile.name}</span>
+              </h3>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={regenerateFileCheatSheet}
+                  disabled={cheatLoading}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-[2px] border-black bg-white text-black font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  🔄 Tạo lại
+                </button>
+                <button
+                  onClick={() => setCheatFile(null)}
+                  aria-label="Đóng"
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-lg border-[2px] border-black bg-white text-black font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5 md:p-6">
+              {cheatLoading ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+                  <div
+                    className="w-14 h-14 rounded-full border-[4px] border-black border-t-transparent animate-spin"
+                    style={{ borderRightColor: '#FBBC05', borderBottomColor: '#FBBC05' }}
+                  />
+                  <p className="font-black text-black text-lg">AI đang tạo phao cho file {cheatFile.name}...</p>
+                  <p className="font-medium text-black/60 text-sm">
+                    Quá trình này có thể mất khoảng 10-20 giây.
+                  </p>
+                </div>
+              ) : cheatCache[cheatFile.id] ? (
+                <CheatSheetRenderer data={cheatCache[cheatFile.id]} template="academic-blue" />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-4 py-14 text-center">
+                  <span className="text-4xl" aria-hidden>😵</span>
+                  <p className="font-black text-black text-lg">Không thể tạo phao cho file này</p>
+                  <p className="max-w-md font-medium text-black/70 text-sm">
+                    File này chưa có nội dung text (ảnh, hoặc tải trước bản cập nhật → tải lại file PDF/Word/TXT).
+                  </p>
+                  {cheatError && (
+                    <p className="max-w-md font-medium text-black/50 text-xs">Chi tiết: {String(cheatError)}</p>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap justify-center">
+                    <button
+                      onClick={regenerateFileCheatSheet}
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border-[3px] border-black text-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                      style={{ backgroundColor: '#FBBC05' }}
+                    >
+                      🔄 Thử lại
+                    </button>
+                    <button
+                      onClick={() => setCheatFile(null)}
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border-[3px] border-black bg-white text-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                    >
+                      Đóng
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

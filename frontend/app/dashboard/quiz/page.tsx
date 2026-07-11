@@ -37,6 +37,7 @@ export default function QuizPage() {
   const [phase, setPhase] = useState<Phase>('picker')
 
   const [selectedFolder, setSelectedFolder] = useState<any>(null)
+  const [questionCount, setQuestionCount] = useState<number>(5)
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
@@ -84,7 +85,7 @@ export default function QuizPage() {
 
     const folderId = folder._id || folder.id
     try {
-      const res = await generateQuiz(folderId)
+      const res = await generateQuiz(folderId, questionCount)
       const qs: Question[] = (res && res.questions) || []
 
       // Backend có thể trả về 1 câu "lỗi hệ thống" khi AI thất bại
@@ -556,6 +557,25 @@ export default function QuizPage() {
           </p>
         </div>
       ) : (
+        <>
+        {/* Chọn số câu hỏi */}
+        <div className="mb-6 bg-white border-[3px] border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 sm:p-5">
+          <p className="font-black text-sm mb-3 flex items-center gap-2">🎯 Số câu hỏi mỗi lần luyện</p>
+          <div className="flex flex-wrap gap-3">
+            {[5, 10, 15, 20].map((n) => (
+              <button
+                key={n}
+                onClick={() => setQuestionCount(n)}
+                className={`px-5 py-2.5 rounded-xl border-[3px] border-black font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                  questionCount === n ? 'bg-[#4285F4] text-white -translate-y-0.5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]' : 'bg-white hover:bg-gray-50'
+                }`}
+              >
+                {n} câu
+              </button>
+            ))}
+          </div>
+          <p className="text-xs font-bold text-gray-400 mt-2">Chọn thư mục bên dưới để bắt đầu luyện {questionCount} câu.</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {folders.map((f, i) => {
             const accent = ACCENTS[i % ACCENTS.length]
@@ -592,6 +612,7 @@ export default function QuizPage() {
             )
           })}
         </div>
+        </>
       )}
     </div>
   )

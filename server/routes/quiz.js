@@ -37,7 +37,8 @@ router.post('/generate/:folderId', protect, async (req, res) => {
       return res.status(400).json({ error: 'Không đủ nội dung văn bản để tạo Quiz' });
     }
 
-    const questions = await generateQuiz(allTexts, folder.name);
+    const count = Math.min(20, Math.max(3, parseInt(req.query.count || req.body.count || '5', 10) || 5));
+    const questions = await generateQuiz(allTexts, folder.name, count);
     res.json({ questions });
   } catch (error) {
     console.error('[Quiz Generate Error]', error);

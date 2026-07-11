@@ -130,6 +130,24 @@ create table if not exists public.room_messages (
 create index if not exists room_messages_channel_idx on public.room_messages (channel_id, created_at);
 create index if not exists room_messages_room_idx on public.room_messages (room_id);
 
+-- ---------- forum_posts (tài liệu chia sẻ ở diễn đàn — bền vững) ----------
+create table if not exists public.forum_posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  title text not null,
+  description text not null default '',
+  category text not null default 'Tài liệu',
+  school text not null default '',
+  file_url text not null default '',
+  file_name text not null default '',
+  file_type text not null default '',
+  file_size bigint not null default 0,
+  downloads int not null default 0,
+  likes int not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists forum_posts_created_idx on public.forum_posts (created_at desc);
+
 -- ---------- peer_rewards ----------
 create table if not exists public.peer_rewards (
   id uuid primary key default gen_random_uuid(),
@@ -236,6 +254,7 @@ alter table public.room_members disable row level security;
 alter table public.room_channels disable row level security;
 alter table public.room_files disable row level security;
 alter table public.room_messages disable row level security;
+alter table public.forum_posts disable row level security;
 alter table public.peer_rewards disable row level security;
 alter table public.user_unlocked_rewards disable row level security;
 alter table public.quiz_attempts disable row level security;

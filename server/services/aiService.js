@@ -301,14 +301,14 @@ async function analyzeHandwriting(imageBuffer, mimeType) {
   });
 }
 
-async function generateQuiz(allTexts, folderName = '') {
+async function generateQuiz(allTexts, folderName = '', count = 5) {
   try {
     const out = await chatJSON({
       model: TEXT_MODEL,
       schema: SCHEMAS.QUIZ_SCHEMA,
       messages: [
         { role: 'system', content: 'Bạn là chuyên gia ra đề thi trắc nghiệm. Trả về theo schema JSON đã định nghĩa.' },
-        { role: 'user', content: PROMPTS.generateQuiz(allTexts, folderName) }
+        { role: 'user', content: PROMPTS.generateQuiz(allTexts, folderName, count) }
       ]
     });
     return out.questions;

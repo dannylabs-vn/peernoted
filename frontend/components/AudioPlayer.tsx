@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { generatePodcast, clearPodcast } from '@/lib/api'
+import { resolveFileUrl } from '@/lib/fileUrl'
 import { Play, Pause, RefreshCw, AlertTriangle, Mic2 } from 'lucide-react'
 
 export default function AudioPlayer({ folderId, folderName }: { folderId: string, folderName: string }) {
@@ -21,7 +22,7 @@ export default function AudioPlayer({ folderId, folderName }: { folderId: string
     try {
       const res = await generatePodcast(folderId)
       setScript(res.data.script || [])
-      setAudioUrl(res.data.audio_url)
+      setAudioUrl(resolveFileUrl(res.data.audio_url) || null)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message)
     } finally {
@@ -44,7 +45,7 @@ export default function AudioPlayer({ folderId, folderName }: { folderId: string
       await clearPodcast(folderId)
       const res = await generatePodcast(folderId)
       setScript(res.data.script || [])
-      setAudioUrl(res.data.audio_url)
+      setAudioUrl(resolveFileUrl(res.data.audio_url) || null)
     } catch (err: any) {
       setError(err.response?.data?.error || err.message)
     } finally {

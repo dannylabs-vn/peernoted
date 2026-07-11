@@ -137,7 +137,7 @@ export const suggestRoles = (roomId: string, memberIds: string[]) =>
   API.post('/ai/suggest-role', { roomId, memberIds }).then(r => r.data);
 
 // ===== QUIZ & SPACED REPETITION =====
-export const generateQuiz = (folderId: string) => API.post(`/quiz/generate/${folderId}`).then(r => r.data);
+export const generateQuiz = (folderId: string, count = 5) => API.post(`/quiz/generate/${folderId}?count=${count}`).then(r => r.data);
 export const submitQuiz = (data: any) => API.post('/quiz/submit', data).then(r => r.data);
 export const getQuizStats = () => API.get('/quiz/stats').then(r => r.data);
 export const getSpacedRepetitionItems = () => API.get('/quiz/spaced-repetition').then(r => r.data);
@@ -157,5 +157,14 @@ export const sendDirectMessage = (friendId: string, content: string) =>
 export const getTutorAnalysis = () => API.get('/tutor/analysis').then(r => r.data);
 export const generateTutorRoadmap = (userNote: string = '') =>
   API.post('/tutor/roadmap', { user_note: userNote }).then(r => r.data);
+
+// Forum
+export const getForumPosts = () => API.get('/forum/posts').then(r => r.data);
+export const createForumPost = (formData: FormData) => API.post('/forum/posts', formData).then(r => r.data);
+export const downloadForumPost = (id: string) => API.post(`/forum/posts/${id}/download`).then(r => r.data);
+export const likeForumPost = (id: string) => API.post(`/forum/posts/${id}/like`).then(r => r.data);
+export const deleteForumPost = (id: string) => API.delete(`/forum/posts/${id}`).then(r => r.data);
+// Per-file cheat sheet
+export const generateFileCheatSheet = (fileId: string) => API.post(`/ai/cheatsheet/file/${fileId}`).then(r => r.data);
 
 export default API;

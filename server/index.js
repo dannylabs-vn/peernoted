@@ -17,6 +17,7 @@ const channelRoutes = require('./routes/channels');
 const roomFileRoutes = require('./routes/room-files');
 const peerpointRoutes = require('./routes/peerpoints');
 const quizRoutes = require('./routes/quiz');
+const forumRoutes = require('./routes/forum');
 const tutorRoutes = require('./routes/tutor');
 const setupSocket = require('./socket');
 
@@ -80,6 +81,7 @@ app.use('/api', channelRoutes);
 app.use('/api', roomFileRoutes);
 app.use('/api', peerpointRoutes);
 app.use('/api/quiz', quizRoutes);
+app.use('/api/forum', forumRoutes);
 app.use('/api/tutor', tutorRoutes);
 
 app.get('/api/health', (req, res) => {
