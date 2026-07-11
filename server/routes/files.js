@@ -4,6 +4,7 @@ const multer = require('multer');
 const { supabase, toApi, toApiList } = require('../config/supabase');
 const { uploadToStorage, deleteFromStorage } = require('../services/storageService');
 const { fixLatin1Name } = require('../utils/encoding');
+const { extractText, isImageType } = require('../services/extractorService');
 
 const allowedMimes = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
@@ -75,13 +76,23 @@ router.post('/upload', upload.array('files', 20), async (req, res) => {
       const ext = file.originalname.split('.').pop().toLowerCase();
       const originalNameUtf8 = fixLatin1Name(file.originalname);
 
+      // Trích xuất text NGAY khi upload thủ công (giống route AI classify) để
+      // phao cứu cấp / podcast / quiz / mindmap có nội dung. Trước đây thiếu
+      // bước này → cheat sheet 400 "không đủ nội dung".
+      let extractedText = '';
+      if (!isImageType(ext)) {
+        try { extractedText = await extractText(file.buffer, ext) || ''; }
+        catch (e) { console.warn('[Upload] extractText failed:', e.message); }
+      }
+
       const { data, error } = await (req.supabase || supabase).from('files')
         .insert({
           folder_id,
           original_name: originalNameUtf8,
           storage_url: storageUrl,
           file_type: ext,
-          file_size: file.size
+          file_size: file.size,
+          extracted_text: extractedText
         })
         .select('*')
         .single();

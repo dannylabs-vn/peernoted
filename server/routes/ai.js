@@ -315,7 +315,7 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
     const allTexts = await getAllTextsForFolder(req, folder.id);
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({
-        error: 'Không đủ nội dung văn bản trong thư mục này để tạo phao cứu cấp'
+        error: 'Thư mục chưa có nội dung văn bản để tạo phao. Nếu bạn vừa tải file lên, hãy tải lại file PDF/Word/TXT (file ảnh không trích xuất được chữ). File tải trước bản cập nhật này cần tải lại để hệ thống đọc nội dung.'
       });
     }
 
