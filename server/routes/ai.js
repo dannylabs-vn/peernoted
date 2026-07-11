@@ -62,15 +62,29 @@ function isMeaningfulText(text) {
   return wordHits.length >= 5;
 }
 
-async function getAllTextsForFolder(req, folderId) {
-  const { data, error } = await (req.supabase || supabase).from('files')
-    .select('extracted_text')
+// fileIds (optional): nếu truyền, chỉ gom text từ các file được chọn (cho phép
+// user tạo phao/podcast từ file cụ thể thay vì cả folder).
+async function getAllTextsForFolder(req, folderId, fileIds = null) {
+  let query = (req.supabase || supabase).from('files')
+    .select('id, extracted_text')
     .eq('folder_id', folderId);
+  if (Array.isArray(fileIds) && fileIds.length > 0) {
+    query = query.in('id', fileIds);
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return data
     .map(f => f.extracted_text)
     .filter(t => t && t.trim().length > 0)
     .join('\n\n---\n\n');
+}
+
+// Parse fileIds từ query (?fileIds=a,b,c) hoặc body
+function parseFileIds(req) {
+  const raw = req.query.fileIds || req.body?.fileIds;
+  if (!raw) return null;
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  return String(raw).split(',').map(s => s.trim()).filter(Boolean);
 }
 
 // ===========================================================================
@@ -300,8 +314,12 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
     const folder = await getFolderOr404(req, req.params.folderId, res);
     if (!folder) return;
 
-    // Return cached JSON if present
-    if (folder.cheat_sheet_json) {
+    // Nếu user chọn file cụ thể → gen fresh từ các file đó, KHÔNG dùng/ghi cache folder.
+    const fileIds = parseFileIds(req);
+    const useSelection = Array.isArray(fileIds) && fileIds.length > 0;
+
+    // Return cached JSON if present (chỉ khi KHÔNG chọn file cụ thể)
+    if (!useSelection && folder.cheat_sheet_json) {
       return res.json({
         json: folder.cheat_sheet_json,
         markdown: folder.cheat_sheet_markdown || null,
@@ -312,7 +330,7 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
     }
 
     // Generate fresh
-    const allTexts = await getAllTextsForFolder(req, folder.id);
+    const allTexts = await getAllTextsForFolder(req, folder.id, fileIds);
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({
         error: 'Thư mục chưa có nội dung văn bản để tạo phao. Nếu bạn vừa tải file lên, hãy tải lại file PDF/Word/TXT (file ảnh không trích xuất được chữ). File tải trước bản cập nhật này cần tải lại để hệ thống đọc nội dung.'
@@ -361,8 +379,8 @@ router.get('/cheatsheet/:folderId', async (req, res) => {
       isMock = true;
     }
 
-    // Chỉ lưu vào DB nếu là hàng thật (không phải mock)
-    if (!isMock) {
+    // Chỉ lưu cache vào DB nếu là hàng thật VÀ tạo từ cả folder (không phải file cụ thể)
+    if (!isMock && !useSelection) {
       await (req.supabase || supabase).from('folders')
         .update({ cheat_sheet_json: json })
         .eq('id', folder.id);
@@ -539,10 +557,10 @@ router.post('/cheatsheet/file/:fileId', async (req, res) => {
 // ===========================================================================
 router.post('/mindmap/:folderId', async (req, res) => {
   try {
-    const folder = await getFolderOr404(req.params.folderId, res);
+    const folder = await getFolderOr404(req, req.params.folderId, res);
     if (!folder) return;
 
-    const allTexts = await getAllTextsForFolder(req, folder.id);
+    const allTexts = await getAllTextsForFolder(req, folder.id, parseFileIds(req));
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({ error: 'Không đủ nội dung văn bản để tạo mindmap' });
     }
@@ -563,7 +581,11 @@ router.post('/podcast/:folderId', async (req, res) => {
     const folder = await getFolderOr404(req, req.params.folderId, res);
     if (!folder) return;
 
-    if (folder.podcast_audio_url && Array.isArray(folder.podcast_script) && folder.podcast_script.length > 0) {
+    // Nếu user chọn file cụ thể → gen fresh từ các file đó, KHÔNG dùng/ghi cache folder.
+    const fileIds = parseFileIds(req);
+    const useSelection = Array.isArray(fileIds) && fileIds.length > 0;
+
+    if (!useSelection && folder.podcast_audio_url && Array.isArray(folder.podcast_script) && folder.podcast_script.length > 0) {
       return res.json({
         script: folder.podcast_script,
         audio_url: folder.podcast_audio_url,
@@ -571,7 +593,7 @@ router.post('/podcast/:folderId', async (req, res) => {
       });
     }
 
-    const allTexts = await getAllTextsForFolder(req, folder.id);
+    const allTexts = await getAllTextsForFolder(req, folder.id, fileIds);
     if (!allTexts || allTexts.trim().length < 20) {
       return res.status(400).json({ error: 'Không đủ nội dung văn bản để tạo podcast' });
     }
@@ -596,7 +618,8 @@ router.post('/podcast/:folderId', async (req, res) => {
       console.log('TTS generation skipped:', e.message);
     }
 
-    if (!isMock) {
+    // Chỉ cache khi tạo từ cả folder (không phải file cụ thể)
+    if (!isMock && !useSelection) {
       await (req.supabase || supabase).from('folders')
         .update({
           podcast_script: script,

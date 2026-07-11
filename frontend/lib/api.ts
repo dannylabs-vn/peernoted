@@ -63,7 +63,11 @@ export const classifyFiles = (files: File[]) => {
 };
 
 // Cheat sheet
-export const getCheatSheet = (folderId: string) => API.get(`/ai/cheatsheet/${folderId}`);
+// fileIds (tùy chọn): chỉ tạo phao từ các file được chọn, không gom cả folder.
+export const getCheatSheet = (folderId: string, fileIds?: string[]) => {
+  const qs = fileIds && fileIds.length ? `?fileIds=${fileIds.join(',')}` : '';
+  return API.get(`/ai/cheatsheet/${folderId}${qs}`);
+};
 export const generateMindmap = (folderId: string) => API.post(`/ai/mindmap/${folderId}`).then(r => r.data);
 export const clearCheatSheet = (folderId: string) => API.delete(`/ai/cheatsheet/${folderId}`);
 export const setCheatSheetTemplate = (folderId: string, template: any) =>
@@ -79,7 +83,9 @@ export const pickHandwritingFontManual = (folderId: string, fontFamily: string) 
   API.post(`/ai/cheatsheet/${folderId}/handwriting/manual`, { font_family: fontFamily });
 
 // Podcast
-export const generatePodcast = (folderId: string) => API.post(`/ai/podcast/${folderId}`);
+// fileIds (tùy chọn): chỉ tạo podcast từ các file được chọn, không gom cả folder.
+export const generatePodcast = (folderId: string, fileIds?: string[]) =>
+  API.post(`/ai/podcast/${folderId}`, fileIds && fileIds.length ? { fileIds } : {});
 export const clearPodcast = (folderId: string) => API.delete(`/ai/podcast/${folderId}`);
 
 // Recommendations

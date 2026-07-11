@@ -352,12 +352,16 @@ export default function BattlePanel({ roomId, myUserId }: { roomId: string; myUs
     }
   };
 
-  const handleAnswer = async (index: number, option: string) => {
+  // optionIndex = vị trí đáp án (0-3) để highlight UI.
+  // battleAnswer PHẢI gửi QUESTION index (currentQuestion.index) — không phải
+  // option index — nếu không backend so battle.currentIndex !== index → bỏ qua
+  // câu trả lời → điểm không cộng + BXH không cập nhật.
+  const handleAnswer = async (optionIndex: number, option: string) => {
     if (hasAnswered || !currentQuestion) return;
     setHasAnswered(true);
-    setMyAnswer(index);
+    setMyAnswer(optionIndex);
     try {
-      const res = await battleAnswer(battleId, index, option);
+      const res = await battleAnswer(battleId, currentQuestion.index, option);
       if (res?.ok && typeof res.gained === 'number') setGained(res.gained);
     } catch {
       /* answer is best-effort */

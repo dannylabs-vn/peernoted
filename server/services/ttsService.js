@@ -24,33 +24,70 @@ const VOICES_EN = {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function generateChunk(text, voice, outputPath = null, retries = 3) {
+// Edge-tts voice → OpenAI TTS voice (khi fallback). MC nam→onyx, nữ→nova.
+function openAiVoiceFor(edgeVoice) {
+  if (/HoaiMy|Jenny|female/i.test(edgeVoice)) return 'nova';
+  return 'onyx';
+}
+
+// OpenAI TTS — dùng khi edge-tts fail (Render chặn WebSocket tới Microsoft).
+// API HTTPS chuẩn nên chạy được ở mọi môi trường cloud. Cần OPENAI_API_KEY.
+async function generateChunkOpenAI(text, edgeVoice) {
+  if (!process.env.OPENAI_API_KEY) throw new Error('No OPENAI_API_KEY for TTS fallback');
+  const res = await fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini-tts',
+      voice: openAiVoiceFor(edgeVoice),
+      input: text.substring(0, 4000)
+    })
+  });
+  if (!res.ok) {
+    // Model mới có thể chưa khả dụng → thử tts-1
+    const res2 = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'tts-1', voice: openAiVoiceFor(edgeVoice), input: text.substring(0, 4000) })
+    });
+    if (!res2.ok) throw new Error(`OpenAI TTS failed: ${res2.status} ${await res2.text().catch(() => '')}`);
+    return Buffer.from(await res2.arrayBuffer());
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function generateChunk(text, voice, outputPath = null, retries = 2) {
   const { EdgeTTS } = await import('edge-tts-universal');
 
-  let lastError;
+  // Thử edge-tts (free) trước
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      if (attempt > 1) {
-        console.log(`[TTS] Retry ${attempt}/${retries} (${voice})...`);
-        await sleep(2000 * attempt);
-      }
-
+      if (attempt > 1) await sleep(1500 * attempt);
       const tts = new EdgeTTS(text, voice);
       const result = await tts.synthesize();
       if (!result || !result.audio) throw new Error('No audio received');
-
-      const arrayBuffer = await result.audio.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const buffer = Buffer.from(await result.audio.arrayBuffer());
       if (buffer.length < 100) throw new Error('Audio buffer suspiciously small');
-
       if (outputPath) fs.writeFileSync(outputPath, buffer);
       return buffer;
     } catch (err) {
-      lastError = err;
-      if (attempt === retries) throw err;
+      if (attempt === retries) {
+        // Edge-tts fail (thường do Render chặn WebSocket) → fallback OpenAI TTS
+        console.warn(`[TTS] Edge-TTS failed (${err.message}), fallback OpenAI TTS...`);
+        try {
+          const buffer = await generateChunkOpenAI(text, voice);
+          if (outputPath) fs.writeFileSync(outputPath, buffer);
+          return buffer;
+        } catch (e2) {
+          console.error(`[TTS] OpenAI TTS fallback cũng fail: ${e2.message}`);
+          throw e2;
+        }
+      }
     }
   }
-  throw lastError;
 }
 
 /**

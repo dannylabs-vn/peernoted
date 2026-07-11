@@ -4,8 +4,12 @@ import { useState, useEffect, useRef } from 'react'
 import { generatePodcast, clearPodcast } from '@/lib/api'
 import { resolveFileUrl } from '@/lib/fileUrl'
 import { Play, Pause, RefreshCw, AlertTriangle, Mic2 } from 'lucide-react'
+import FileSelector from './FileSelector'
 
-export default function AudioPlayer({ folderId, folderName }: { folderId: string, folderName: string }) {
+const fid = (f: any) => f._id || f.id
+const isImage = (f: any) => ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes((f.file_type || '').toLowerCase())
+
+export default function AudioPlayer({ folderId, folderName, files = [] }: { folderId: string, folderName: string, files?: any[] }) {
   const [script, setScript] = useState<any[]>([])
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -16,11 +20,21 @@ export default function AudioPlayer({ folderId, folderName }: { folderId: string
   const [activeLine, setActiveLine] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const loadPodcast = async () => {
+  // Chọn file để tạo podcast (mặc định = tất cả file có text)
+  const textFiles = (files || []).filter(f => !isImage(f))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    setSelectedIds(new Set(textFiles.map(fid)))
+  }, [files])
+  const allSelected = textFiles.length > 0 && textFiles.every(f => selectedIds.has(fid(f)))
+  const selectedArr = Array.from(selectedIds)
+  const isSubset = !allSelected && selectedArr.length > 0
+
+  const loadPodcast = async (ids?: string[]) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await generatePodcast(folderId)
+      const res = await generatePodcast(folderId, ids)
       setScript(res.data.script || [])
       setAudioUrl(resolveFileUrl(res.data.audio_url) || null)
     } catch (err: any) {
@@ -42,10 +56,18 @@ export default function AudioPlayer({ folderId, folderName }: { folderId: string
     setIsPlaying(false)
     if (audioRef.current) audioRef.current.pause()
     try {
-      await clearPodcast(folderId)
-      const res = await generatePodcast(folderId)
-      setScript(res.data.script || [])
-      setAudioUrl(resolveFileUrl(res.data.audio_url) || null)
+      // Tạo từ file đã chọn → gen fresh, không xoá cache của cả folder.
+      // Tạo lại toàn bộ folder → xoá cache trước rồi gen mới.
+      if (isSubset) {
+        const res = await generatePodcast(folderId, selectedArr)
+        setScript(res.data.script || [])
+        setAudioUrl(resolveFileUrl(res.data.audio_url) || null)
+      } else {
+        await clearPodcast(folderId)
+        const res = await generatePodcast(folderId)
+        setScript(res.data.script || [])
+        setAudioUrl(resolveFileUrl(res.data.audio_url) || null)
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || err.message)
     } finally {
@@ -130,6 +152,28 @@ export default function AudioPlayer({ folderId, folderName }: { folderId: string
   // Main Player
   return (
     <div className="flex flex-col h-full space-y-6">
+      {/* Chọn file để tạo podcast */}
+      {textFiles.length >= 2 && (
+        <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <FileSelector
+              files={files}
+              selectedIds={selectedIds}
+              onChange={setSelectedIds}
+              accent="#9B51E0"
+            />
+          </div>
+          {isSubset && (
+            <button
+              onClick={() => loadPodcast(selectedArr)}
+              className="flex-shrink-0 px-4 py-2.5 bg-[#9B51E0] text-white font-black rounded-xl text-sm border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all whitespace-nowrap"
+            >
+              🎙️ Tạo podcast từ {selectedArr.length} file
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Player Card */}
       <div className="bg-[#9B51E0] border-[3px] border-black rounded-2xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-white flex-shrink-0 relative overflow-hidden">
         <div className="relative z-10">

@@ -488,9 +488,9 @@ function LibraryContent() {
 
             <div className="flex-1 overflow-y-auto p-5">
               {view === 'podcast' ? (
-                <AudioPlayer folderId={folderId} folderName={folders.find(f => f._id === folderId)?.name} />
+                <AudioPlayer folderId={folderId} folderName={folders.find(f => f._id === folderId)?.name} files={files} />
               ) : view === 'cheatsheet' ? (
-                <CheatSheet folderId={folderId} folderName={folders.find(f => f._id === folderId)?.name} />
+                <CheatSheet folderId={folderId} folderName={folders.find(f => f._id === folderId)?.name} files={files} />
               ) : filesLoading ? (
                 <div className="flex justify-center mt-10">
                   <div className="w-8 h-8 border-[3px] border-black border-t-[#3C73ED] rounded-full animate-spin"></div>

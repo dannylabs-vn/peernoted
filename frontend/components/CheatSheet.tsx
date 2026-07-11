@@ -16,9 +16,13 @@ import TemplatePicker from './cheatsheet/TemplatePicker'
 import HandwritingUploadModal from './cheatsheet/HandwritingUploadModal'
 import ExportButtons from './cheatsheet/ExportButtons'
 import MindmapView from './MindmapView'
+import FileSelector from './FileSelector'
 import './CheatSheet.css'
 
-export default function CheatSheet({ folderId, folderName }) {
+const fid = (f: any) => f._id || f.id
+const isImage = (f: any) => ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes((f.file_type || '').toLowerCase())
+
+export default function CheatSheet({ folderId, folderName, files = [] }) {
   const [json, setJson] = useState<any>(null)
   const [markdown, setMarkdown] = useState('')
   const [template, setTemplate] = useState('neo-brutalism')
@@ -35,17 +39,27 @@ export default function CheatSheet({ folderId, folderName }) {
   const [mindmapLoading, setMindmapLoading] = useState(false)
   const [mindmapError, setMindmapError] = useState<any>(null)
 
+  // Chọn file để tạo phao (mặc định = tất cả file có text)
+  const textFiles = (files || []).filter(f => !isImage(f))
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    setSelectedIds(new Set(textFiles.map(fid)))
+  }, [files]) // reset khi đổi folder / danh sách file thay đổi
+  const allSelected = textFiles.length > 0 && textFiles.every(f => selectedIds.has(fid(f)))
+  const selectedArr = Array.from(selectedIds)
+  const isSubset = !allSelected && selectedArr.length > 0
+
   const renderRef = useRef(null)
 
   useEffect(() => {
     loadCheatSheet()
   }, [folderId])
 
-  const loadCheatSheet = async () => {
+  const loadCheatSheet = async (ids?: string[]) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await getCheatSheet(folderId)
+      const res = await getCheatSheet(folderId, ids)
       // NFC normalize ngay tại response để fix Vietnamese diacritics dạng decomposed
       // (OpenAI đôi khi trả "Cáp" thay vì "Cấp")
       const nfc = (s) => typeof s === 'string' ? s.normalize('NFC') : s
@@ -198,6 +212,27 @@ export default function CheatSheet({ folderId, folderName }) {
           </button>
         </div>
       </div>
+
+      {textFiles.length >= 2 && (
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <div className="flex-1 min-w-0">
+            <FileSelector
+              files={files}
+              selectedIds={selectedIds}
+              onChange={setSelectedIds}
+              accent="#FBBC05"
+            />
+          </div>
+          {isSubset && (
+            <button
+              onClick={() => loadCheatSheet(selectedArr)}
+              className="flex-shrink-0 px-4 py-2.5 bg-[#FBBC05] text-black font-black rounded-xl text-sm border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all whitespace-nowrap"
+            >
+              📝 Tạo phao từ {selectedArr.length} file
+            </button>
+          )}
+        </div>
+      )}
 
       {json && (
         <div className="cheatsheet-toolbar">
