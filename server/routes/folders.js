@@ -22,7 +22,9 @@ async function countFilesByType(client, folderId) {
   return { fileCount: total, pdfCount: pdf, imageCount: image, docCount: doc };
 }
 
-// GET all folders
+// GET all folders — sắp theo thứ tự người dùng kéo-thả (position), rồi mới đến
+// updated_at cho các folder chưa từng sắp xếp. CỐ Ý sắp bằng JS (không .order ở
+// DB) để nếu migration cột 'position' chưa chạy thì route vẫn không lỗi 500.
 router.get('/', async (req, res) => {
   try {
     const { data, error } = await (req.supabase || supabase).from('folders')
@@ -36,6 +38,8 @@ router.get('/', async (req, res) => {
         return { ...toApi(folder), ...counts };
       })
     );
+    // position mặc định 0 → giữ nguyên thứ tự updated_at desc; đã kéo-thả → theo position
+    enriched.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     res.json(enriched);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -74,15 +78,17 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT update folder
+// PUT update folder (đổi tên, môn, MÀU, gắn sao...)
 router.put('/:id', async (req, res) => {
   try {
-    const { name, subject, chapter, grade } = req.body;
+    const { name, subject, chapter, grade, color, is_starred } = req.body;
     const patch = {};
     if (name !== undefined) patch.name = name;
     if (subject !== undefined) patch.subject = subject;
     if (chapter !== undefined) patch.chapter = chapter;
     if (grade !== undefined) patch.grade = grade;
+    if (color !== undefined) patch.color = color || ''; // cột NOT NULL → null thành ''
+    if (is_starred !== undefined) patch.is_starred = !!is_starred;
     const { data, error } = await (req.supabase || supabase).from('folders')
       .update(patch)
       .eq('id', req.params.id)
@@ -93,6 +99,25 @@ router.put('/:id', async (req, res) => {
     res.json(toApi(data));
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// POST reorder folders — nhận mảng id theo thứ tự mới, ghi lại position = index.
+router.post('/reorder', async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ error: 'orderedIds must be a non-empty array' });
+    }
+    const client = req.supabase || supabase;
+    await Promise.all(
+      orderedIds.map((id, index) =>
+        client.from('folders').update({ position: index }).eq('id', id)
+      )
+    );
+    res.json({ message: 'reordered', count: orderedIds.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState, useRef, Suspense } from 'react';
-import { getFolders, getFiles, uploadFiles, createFolder, generateFileCheatSheet } from '@/lib/api';
+import { getFolders, getFiles, uploadFiles, createFolder, generateFileCheatSheet, updateFolder, reorderFolders, moveFiles } from '@/lib/api';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Folder, FileText, ChevronRight, Download, Eye, Trash2, Clock, Hash, Tag, List, LayoutGrid, Image as ImageIcon, Upload, UploadCloud, FolderPlus, X, Loader2, CheckCircle2 } from 'lucide-react';
+import { Folder, FileText, ChevronRight, Download, Eye, Trash2, Clock, Hash, Tag, List, LayoutGrid, Image as ImageIcon, Upload, UploadCloud, FolderPlus, X, Loader2, CheckCircle2, Star, Palette, FolderInput, GripVertical } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const CheatSheet = dynamic(() => import('@/components/CheatSheet'), {
@@ -15,6 +15,9 @@ const CheatSheetRenderer: any = dynamic(() => import('@/components/cheatsheet/Ch
 });
 import AudioPlayer from '@/components/AudioPlayer';
 import { resolveFileUrl } from '@/lib/fileUrl';
+
+// Bảng màu để nhấn mạnh thư mục quan trọng (Google palette + vài màu phụ)
+const FOLDER_COLORS = ['#4285F4', '#EA4335', '#34A853', '#FBBC05', '#9B51E0', '#FF6D01', '#00ACC1', '#EC407A'];
 
 function LibraryContent() {
   const searchParams = useSearchParams();
@@ -38,6 +41,15 @@ function LibraryContent() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [toast, setToast] = useState<{ type: 'success'|'error'; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // ===== Kéo-thả sắp xếp folder + đổi màu / gắn sao =====
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [colorPicker, setColorPicker] = useState<{ id: string; x: number; y: number } | null>(null);
+
+  // ===== Chuyển file sang folder khác =====
+  const [moveTarget, setMoveTarget] = useState<{ id: string; name: string } | null>(null);
+  const [moving, setMoving] = useState(false);
 
   // ===== PER-FILE CHEAT SHEET (Phao cho từng file) =====
   const [cheatFile, setCheatFile] = useState<{ id: string; name: string } | null>(null);
@@ -102,9 +114,8 @@ function LibraryContent() {
     e.stopPropagation();
     const newName = prompt('Nhập tên mới cho thư mục này:', currentName);
     if (!newName || newName.trim() === '' || newName === currentName) return;
-    
+
     try {
-      const { updateFolder } = await import('@/lib/api');
       await updateFolder(id, { name: newName.trim() });
       await fetchFolders();
     } catch (err) {
@@ -154,6 +165,67 @@ function LibraryContent() {
       else next.add(id);
       return next;
     });
+  };
+
+  // ===== GẮN SAO / ĐỔI MÀU FOLDER =====
+  const handleToggleStar = async (e: React.MouseEvent, folder: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const next = !folder.is_starred;
+    // optimistic
+    setFolders(prev => prev.map(f => f._id === folder._id ? { ...f, is_starred: next } : f));
+    try {
+      await updateFolder(folder._id, { is_starred: next });
+    } catch (err) {
+      console.error(err);
+      setFolders(prev => prev.map(f => f._id === folder._id ? { ...f, is_starred: !next } : f));
+    }
+  };
+
+  const handleSetColor = async (id: string, color: string) => {
+    setColorPicker(null);
+    setFolders(prev => prev.map(f => f._id === id ? { ...f, color } : f));
+    try {
+      await updateFolder(id, { color });
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Không thể đổi màu thư mục');
+      await fetchFolders();
+    }
+  };
+
+  // ===== KÉO-THẢ SẮP XẾP FOLDER =====
+  const handleFolderDrop = (targetId: string) => {
+    const sourceId = draggingId;
+    setDragOverId(null);
+    setDraggingId(null);
+    if (!sourceId || sourceId === targetId) return;
+    const current = [...folders];
+    const from = current.findIndex(f => f._id === sourceId);
+    const to = current.findIndex(f => f._id === targetId);
+    if (from === -1 || to === -1) return;
+    const [moved] = current.splice(from, 1);
+    current.splice(to, 0, moved);
+    setFolders(current);
+    reorderFolders(current.map(f => f._id)).catch(() => fetchFolders());
+  };
+
+  // ===== CHUYỂN FILE SANG FOLDER KHÁC =====
+  const handleMoveFile = async (targetFolderId: string) => {
+    if (!moveTarget) return;
+    setMoving(true);
+    try {
+      await moveFiles([moveTarget.id], targetFolderId);
+      setMoveTarget(null);
+      if (folderId) await fetchFiles(folderId);
+      await fetchFolders();
+      showToast('success', 'Đã chuyển tài liệu sang thư mục mới!');
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Không thể chuyển tài liệu. Vui lòng thử lại.');
+    } finally {
+      setMoving(false);
+    }
   };
 
   const fetchFiles = async (id: string) => {
@@ -252,17 +324,19 @@ function LibraryContent() {
     }
   };
 
-  // ===== DRAG & DROP =====
+  // ===== DRAG & DROP (chỉ nhận kéo FILE từ ngoài, bỏ qua kéo sắp xếp folder) =====
+  const isFileDrag = (e: React.DragEvent) =>
+    Array.from(e.dataTransfer?.types || []).includes('Files');
   const handleDragOver = (e: React.DragEvent) => {
+    if (!folderId || uploading || !isFileDrag(e)) return;
     e.preventDefault();
-    if (!folderId || uploading) return;
     if (!dragOver) setDragOver(true);
   };
   const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
     setDragOver(false);
   };
   const handleDrop = (e: React.DragEvent) => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     setDragOver(false);
     if (!folderId) return;
@@ -337,47 +411,87 @@ function LibraryContent() {
             folders.map((folder) => {
               const isActive = folderId === folder._id;
               const isSelected = selectedFolderIds.has(folder._id);
+              const isDragOver = dragOverId === folder._id && draggingId !== folder._id;
               return (
-                <button
+                <div
                   key={folder._id}
+                  role="button"
+                  tabIndex={0}
+                  draggable
+                  onDragStart={() => setDraggingId(folder._id)}
+                  onDragOver={(e) => { e.preventDefault(); if (dragOverId !== folder._id) setDragOverId(folder._id); }}
+                  onDragLeave={() => { if (dragOverId === folder._id) setDragOverId(null); }}
+                  onDrop={(e) => { e.preventDefault(); handleFolderDrop(folder._id); }}
+                  onDragEnd={() => { setDraggingId(null); setDragOverId(null); }}
                   onClick={() => router.push(`/dashboard/library?folder=${folder._id}`)}
-                  className={`w-full h-[52px] flex items-center justify-between p-3 rounded-xl border-[2px] font-bold text-sm transition-all text-left group/folder relative ${
-                    isActive 
-                      ? 'bg-[#0B0B0B] text-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]' 
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/dashboard/library?folder=${folder._id}`); } }}
+                  style={folder.color ? { borderLeftColor: folder.color, borderLeftWidth: 5 } : undefined}
+                  className={`w-full h-[52px] flex items-center justify-between p-3 rounded-xl border-[2px] font-bold text-sm transition-all text-left group/folder relative cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C73ED] ${
+                    draggingId === folder._id ? 'opacity-40' : ''
+                  } ${
+                    isDragOver ? 'border-dashed border-[#3C73ED] bg-blue-50' : ''
+                  } ${
+                    isActive
+                      ? 'bg-[#0B0B0B] text-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]'
                       : 'bg-white border-transparent hover:border-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-gray-700'
                   }`}
                 >
-                  <div className="flex items-center gap-3 truncate pr-6">
-                    <input 
-                      type="checkbox" 
+                  <div className="flex items-center gap-2.5 truncate pr-6">
+                    <input
+                      type="checkbox"
                       className={`w-4 h-4 flex-shrink-0 rounded-sm border-2 border-black focus:ring-0 ${isActive ? 'accent-white' : 'accent-[#0B0B0B]'}`}
                       checked={isSelected}
                       onClick={(e) => toggleFolderSelection(e, folder._id)}
                       onChange={() => {}}
                     />
-                    <Folder className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#FFC224]' : 'text-gray-400'}`} />
+                    <Folder
+                      className="w-4 h-4 flex-shrink-0"
+                      style={{ color: folder.color || (isActive ? '#FFC224' : '#9ca3af') }}
+                      fill={folder.color ? folder.color : 'none'}
+                    />
                     <span className="truncate">{folder.name}</span>
+                    {folder.is_starred && (
+                      <Star className="w-3.5 h-3.5 flex-shrink-0 text-[#FBBC05]" fill="#FBBC05" />
+                    )}
                   </div>
                   {isActive && <ChevronRight className="w-4 h-4 flex-shrink-0" />}
-                  
+
                   {/* Actions (only show on hover) */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/folder:opacity-100 flex items-center gap-1 z-10 bg-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] rounded-md border-[2px] border-black p-0.5">
-                    <div 
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/folder:opacity-100 focus-within:opacity-100 flex items-center gap-0.5 z-10 bg-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] rounded-md border-[2px] border-black p-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleStar(e, folder)}
+                      className={`p-1.5 rounded-sm transition-all ${folder.is_starred ? 'text-[#FBBC05]' : 'text-gray-400 hover:text-[#FBBC05] hover:bg-yellow-50'}`}
+                      title={folder.is_starred ? 'Bỏ gắn sao' : 'Gắn sao'}
+                    >
+                      <Star className="w-4 h-4" fill={folder.is_starred ? '#FBBC05' : 'none'} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setColorPicker({ id: folder._id, x: e.clientX, y: e.clientY }); }}
+                      className="p-1.5 text-gray-400 hover:text-[#9B51E0] hover:bg-purple-50 rounded-sm transition-all"
+                      title="Đổi màu thư mục"
+                    >
+                      <Palette className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={(e) => handleRenameFolder(e, folder._id, folder.name)}
                       className="p-1.5 text-gray-400 hover:text-[#3C73ED] hover:bg-blue-50 rounded-sm transition-all"
                       title="Đổi tên"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                    </div>
-                    <div 
+                    </button>
+                    <button
+                      type="button"
                       onClick={(e) => handleDeleteFolder(e, folder._id)}
                       className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-all"
                       title="Xóa môn học"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </div>
+                    </button>
                   </div>
-                </button>
+                </div>
               );
             })
           )}
@@ -544,6 +658,13 @@ function LibraryContent() {
                           >
                             📝 <span className="hidden sm:inline">Phao</span>
                           </button>
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMoveTarget({ id: file._id, name: decodeFilename(file.original_name) || 'Tài liệu' }); }}
+                            className="p-2 border-[2px] border-black rounded-lg bg-[#34A853] text-white hover:bg-[#2d9249] shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none"
+                            title="Chuyển sang thư mục khác"
+                          >
+                            <FolderInput className="w-4 h-4" />
+                          </button>
                           <a href={resolveFileUrl(file.storage_url)} target="_blank" rel="noreferrer" className="p-2 border-[2px] border-black rounded-lg bg-white hover:bg-gray-100 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-[1px] active:shadow-none" title="Xem">
                             <Eye className="w-4 h-4" />
                           </a>
@@ -561,6 +682,9 @@ function LibraryContent() {
                         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/90 backdrop-blur-sm p-1 rounded-lg border-[2px] border-black">
                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openFileCheatSheet(file._id, decodeFilename(file.original_name) || 'Tài liệu'); }} className="p-1 bg-[#FBBC05] hover:bg-[#f5b400] text-black rounded border-[2px] border-black" title="Tạo phao (cheat sheet) cho file này">
                              📝
+                           </button>
+                           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMoveTarget({ id: file._id, name: decodeFilename(file.original_name) || 'Tài liệu' }); }} className="p-1 hover:bg-green-100 text-[#34A853] rounded" title="Chuyển sang thư mục khác">
+                             <FolderInput className="w-4 h-4" />
                            </button>
                            <button onClick={(e) => handleDeleteFile(e, file._id)} className="p-1 hover:bg-red-100 text-red-500 rounded" title="Xóa">
                              <Trash2 className="w-4 h-4" />
@@ -755,6 +879,94 @@ function LibraryContent() {
                       Đóng
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Color picker popover (đổi màu thư mục) */}
+      {colorPicker && (
+        <div className="fixed inset-0 z-[80]" onClick={() => setColorPicker(null)}>
+          <div
+            className="absolute bg-white border-[3px] border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3"
+            style={{
+              top: Math.min(colorPicker.y + 8, (typeof window !== 'undefined' ? window.innerHeight : 800) - 140),
+              left: Math.min(colorPicker.x - 20, (typeof window !== 'undefined' ? window.innerWidth : 800) - 200),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[11px] font-black uppercase text-gray-500 mb-2">Màu thư mục</div>
+            <div className="grid grid-cols-4 gap-2 mb-2">
+              {FOLDER_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => handleSetColor(colorPicker.id, c)}
+                  className="w-7 h-7 rounded-lg border-[2px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:scale-110 transition-transform"
+                  style={{ backgroundColor: c }}
+                  title={c}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => handleSetColor(colorPicker.id, '')}
+              className="w-full text-xs font-black px-2 py-1.5 rounded-lg border-[2px] border-black bg-white hover:bg-gray-100 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" /> Bỏ màu
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Move file modal (chuyển file sang thư mục khác) */}
+      {moveTarget && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4"
+          onClick={() => !moving && setMoveTarget(null)}
+        >
+          <div
+            className="bg-white border-[3px] border-black rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] max-w-md w-full mx-4 max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b-[3px] border-black bg-[#34A853] text-white flex justify-between items-center gap-2">
+              <h3 className="font-black text-lg flex items-center gap-2 min-w-0">
+                <FolderInput className="w-5 h-5 flex-shrink-0" />
+                <span className="truncate">Chuyển: {moveTarget.name}</span>
+              </h3>
+              <button
+                onClick={() => !moving && setMoveTarget(null)}
+                className="p-1 hover:bg-black/10 rounded-lg transition-colors flex-shrink-0"
+                title="Đóng"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              <p className="text-sm font-bold text-gray-500 mb-3">Chọn thư mục đích:</p>
+              {moving ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 text-[#34A853] animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {folders.filter(f => f._id !== folderId).length === 0 ? (
+                    <p className="text-center text-gray-400 font-semibold py-6">Chưa có thư mục nào khác để chuyển đến</p>
+                  ) : (
+                    folders.filter(f => f._id !== folderId).map(f => (
+                      <button
+                        key={f._id}
+                        onClick={() => handleMoveFile(f._id)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl border-[2px] border-black bg-white hover:bg-gray-50 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all text-left font-bold text-sm"
+                        style={f.color ? { borderLeftColor: f.color, borderLeftWidth: 5 } : undefined}
+                      >
+                        <Folder className="w-4 h-4 flex-shrink-0" style={{ color: f.color || '#9ca3af' }} fill={f.color || 'none'} />
+                        <span className="truncate flex-1">{f.name}</span>
+                        {f.is_starred && <Star className="w-3.5 h-3.5 text-[#FBBC05] flex-shrink-0" fill="#FBBC05" />}
+                        <ChevronRight className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                      </button>
+                    ))
+                  )}
                 </div>
               )}
             </div>

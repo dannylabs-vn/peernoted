@@ -42,11 +42,16 @@ export const createFolder = (data: any) => API.post('/folders', data);
 export const updateFolder = (id: string, data: any) => API.put(`/folders/${id}`, data);
 export const deleteFolder = (id: string) => API.delete(`/folders/${id}`);
 export const deleteFolders = (ids: string[]) => API.post('/folders/delete-batch', { ids });
+// Sắp xếp lại thứ tự thư mục (kéo-thả). orderedIds = mảng id theo thứ tự mới.
+export const reorderFolders = (orderedIds: string[]) => API.post('/folders/reorder', { orderedIds });
 
 // ===== FILES =====
 export const getFiles = (folderId: string) => API.get('/files', { params: { folder_id: folderId } });
 export const deleteFile = (id: string) => API.delete(`/files/${id}`);
 export const deleteFiles = (ids: string[]) => API.post('/files/delete-batch', { ids });
+// Chuyển file sang thư mục khác
+export const moveFiles = (ids: string[], folderId: string) =>
+  API.post('/files/move', { ids, folder_id: folderId });
 
 export const uploadFiles = (folderId: string, files: File[]) => {
   const formData = new FormData();

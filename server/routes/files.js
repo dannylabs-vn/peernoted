@@ -126,6 +126,38 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST move file(s) sang folder khác (giống "Chuyển đến" của Google Drive)
+router.post('/move', async (req, res) => {
+  try {
+    const { ids, folder_id } = req.body;
+    const idList = Array.isArray(ids) ? ids.filter(Boolean) : (ids ? [ids] : []);
+    if (idList.length === 0) return res.status(400).json({ error: 'ids must be a non-empty array' });
+    if (!folder_id) return res.status(400).json({ error: 'folder_id is required' });
+
+    // Validate UUID để id sai định dạng trả 400 thay vì lỗi Postgres 22P02 → 500
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(folder_id)) return res.status(400).json({ error: 'folder_id không hợp lệ' });
+    if (!idList.every(id => uuidRegex.test(id))) return res.status(400).json({ error: 'Danh sách id không hợp lệ' });
+
+    const client = req.supabase || supabase;
+
+    // Folder đích phải tồn tại
+    const { data: folder, error: fErr } = await client.from('folders').select('id').eq('id', folder_id).maybeSingle();
+    if (fErr) throw fErr;
+    if (!folder) return res.status(404).json({ error: 'Folder đích không tồn tại' });
+
+    const { data, error } = await client.from('files')
+      .update({ folder_id })
+      .in('id', idList)
+      .select('*');
+    if (error) throw error;
+
+    res.json({ message: `${data?.length || 0} files moved`, moved: data?.length || 0, files: toApiList(data) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST delete multiple files (batch)
 router.post('/delete-batch', async (req, res) => {
   try {

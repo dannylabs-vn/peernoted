@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/cheatsheets', label: '03 Phao cứu cấp', icon: LifeBuoy },
   { href: '/dashboard/podcasts', label: '04 Podcast học tập', icon: Headphones },
   { href: '/dashboard/quiz', label: '05 Luyện Quiz', icon: Target },
-  { href: '/dashboard/tutor', label: '06 Vá lỗi (Gia sư AI)', icon: Stethoscope },
+  { href: '/dashboard/tutor', label: '06 Gia sư AI', icon: Stethoscope },
   { href: '/dashboard/forum', label: '07 Diễn đàn chia sẻ', icon: MessageSquare },
   { href: '/dashboard/rooms', label: '08 Phòng Học', icon: Users },
   { href: '/dashboard/rewards', label: '09 Cửa hàng PeerPoint', icon: Gift },

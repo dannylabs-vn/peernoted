@@ -33,10 +33,19 @@ create table if not exists public.folders (
   handwriting_sample_url text not null default '',
   podcast_audio_url text not null default '',
   podcast_script jsonb not null default '[]'::jsonb,
+  color text not null default '',
+  is_starred boolean not null default false,
+  position int not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index if not exists folders_updated_at_idx on public.folders (updated_at desc);
+create index if not exists folders_position_idx on public.folders (position);
+
+-- Migration cho DB đã tồn tại: thêm cột màu / gắn sao / thứ tự cho folders
+alter table public.folders add column if not exists color text not null default '';
+alter table public.folders add column if not exists is_starred boolean not null default false;
+alter table public.folders add column if not exists position int not null default 0;
 
 -- ---------- files ----------
 create table if not exists public.files (
