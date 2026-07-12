@@ -236,7 +236,7 @@ const MINDMAP_SCHEMA = {
                   items: {
                     type: 'object',
                     additionalProperties: false,
-                    required: ['label'],
+                    required: ['label', 'children'],
                     properties: {
                       label: { type: 'string' },
                       children: { type: ['array', 'null'], items: { type: 'object', additionalProperties: false, required: ['label'], properties: { label: { type: 'string' } } } }
