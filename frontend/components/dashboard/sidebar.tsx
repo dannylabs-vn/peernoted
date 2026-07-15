@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { LayoutDashboard, FolderOpen, LifeBuoy, Headphones, MessageSquare, Users, Repeat, Settings, Moon, Target, Gift, Stethoscope } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, LifeBuoy, Headphones, MessageSquare, Users, Repeat, Settings, Target, Gift, Stethoscope } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const NAV_ITEMS = [
@@ -113,18 +113,12 @@ export function Sidebar() {
             </span>
           </div>
           <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden border border-black">
-            <div 
-              className="h-full bg-[#3C73ED] border-r border-black" 
+            <div
+              className="h-full bg-[#3C73ED] border-r border-black"
               style={{ width: `${user ? (user.storage_used ? Math.min(100, (user.storage_used / (5 * 1024 * 1024 * 1024)) * 100) : 0) : 0}%` }}
             ></div>
           </div>
         </div>
-
-        {/* Dark Mode Toggle */}
-        <button className="w-full flex items-center gap-2 px-4 py-2 bg-white border-[2px] border-black rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-          <Moon className="w-4 h-4 text-[#FFC224] fill-[#FFC224]" strokeWidth={2} />
-          Chế độ tối
-        </button>
       </div>
     </aside>
   );

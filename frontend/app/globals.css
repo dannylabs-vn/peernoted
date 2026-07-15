@@ -4,6 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* App chỉ dùng theme sáng. 'only light' chặn Chrome Android / trình duyệt mobile
+     tự bật chế độ tối (Force Dark) làm nền trắng thành đen khi quét QR. */
+  color-scheme: only light;
   --background: #ffffff;
   --foreground: #0a0a0a;
   --card: #ffffff;

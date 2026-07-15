@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 
 import "./globals.css"
 
@@ -24,6 +24,12 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo.png",
   },
+}
+
+// Ép theme sáng trên mọi thiết bị (kể cả mobile đang bật dark mode hệ thống).
+export const viewport: Viewport = {
+  colorScheme: "light",
+  themeColor: "#ffffff",
 }
 
 export default function RootLayout({
